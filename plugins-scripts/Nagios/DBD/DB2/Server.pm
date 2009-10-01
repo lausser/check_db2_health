@@ -717,13 +717,16 @@ sub fetchrow_array {
   my $sth = undef;
   my @row = ();
   eval {
+    $self->trace(sprintf "SQL:\n%s\n", $sql);
     $sth = $self->{handle}->prepare($sql);
     if (scalar(@arguments)) {
+      $self->trace(sprintf "ARGS:\n%s\n", Data::Dumper::Dumper(\@arguments));
       $sth->execute(@arguments);
     } else {
       $sth->execute();
     }
     @row = $sth->fetchrow_array();
+    $self->trace(sprintf "RESULT:\n%s\n", Data::Dumper::Dumper(\@row));
   }; 
   if ($@) {
     $self->debug(sprintf "bumm %s", $@);
@@ -744,13 +747,16 @@ sub fetchall_array {
   my $sth = undef;
   my $rows = undef;
   eval {
+    $self->trace(sprintf "SQL:\n%s\n", $sql);
     $sth = $self->{handle}->prepare($sql);
     if (scalar(@arguments)) {
+      $self->trace(sprintf "ARGS:\n%s\n", Data::Dumper::Dumper(\@arguments));
       $sth->execute(@arguments);
     } else {
       $sth->execute();
     }
     $rows = $sth->fetchall_arrayref();
+    $self->trace(sprintf "RESULT:\n%s\n", Data::Dumper::Dumper($rows));
   }; 
   if ($@) {
     printf STDERR "bumm %s\n", $@;
