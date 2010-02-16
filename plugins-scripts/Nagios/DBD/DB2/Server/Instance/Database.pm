@@ -144,7 +144,7 @@ sub init {
       $self->add_nagios_critical("unable to aquire partitions info");
     }
   } elsif ($params{mode} =~ /server::instance::database::srp/) {
-    # http://www.ibmdatabasemag.com/blog/main/archives/2007/06/db2_luw_perform_2.html
+    # http://www.dbisoftware.com/blog/db2_performance.php?id=96
     $self->{srp} = $params{handle}->fetchrow_array(q{
         SELECT 
           100 - (((pool_async_data_reads + pool_async_index_reads) * 100 ) /
@@ -160,6 +160,7 @@ sub init {
       $self->add_nagios_critical("unable to aquire srp info");
     }
   } elsif ($params{mode} =~ /server::instance::database::awp/) {
+    # http://www.dbisoftware.com/blog/db2_performance.php?id=117
     $self->{awp} = $params{handle}->fetchrow_array(q{
         SELECT 
           (((pool_async_data_writes + pool_async_index_writes) * 100 ) /

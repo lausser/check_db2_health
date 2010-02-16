@@ -481,15 +481,34 @@ sub valdiff {
   my $pparams = shift;
   my %params = %{$pparams};
   my @keys = @_;
+  my $now = time;
   my $last_values = $self->load_state(%params) || eval {
     my $empty_events = {};
     foreach (@keys) {
       $empty_events->{$_} = 0;
     }
     $empty_events->{timestamp} = 0;
+    if ($params{lookback}) {
+      $empty_events->{lookback_history} = {};
+    }
     $empty_events;
   };
   foreach (@keys) {
+    if ($params{lookback}) {
+      # find a last_value in the history which fits lookback best
+      # and overwrite $last_values->{$_} with historic data
+      if (exists $last_values->{lookback_history}->{$_}) {
+        foreach my $date (sort {$a <=> $b} keys %{$last_values->{lookback_history}->{$_}}) {
+          if ($date >= ($now - $params{lookback})) {
+            $last_values->{$_} = $last_values->{lookback_history}->{$_}->{$date};
+            $last_values->{timestamp} = $date;
+            last;
+          } else {
+            delete $last_values->{lookback_history}->{$_}->{$date};
+          }
+        }
+      }
+    }
     $last_values->{$_} = 0 if ! exists $last_values->{$_};
     if ($self->{$_} >= $last_values->{$_}) {
       $self->{'delta_'.$_} = $self->{$_} - $last_values->{$_};
@@ -499,13 +518,19 @@ sub valdiff {
     }
     $self->debug(sprintf "delta_%s %f", $_, $self->{'delta_'.$_});
   }
-  $self->{'delta_timestamp'} = time - $last_values->{timestamp};
+  $self->{'delta_timestamp'} = $now - $last_values->{timestamp};
   $params{save} = eval {
     my $empty_events = {};
     foreach (@keys) {
       $empty_events->{$_} = $self->{$_};
     }
-    $empty_events->{timestamp} = time;
+    $empty_events->{timestamp} = $now;
+    if ($params{lookback}) {
+      $empty_events->{lookback_history} = $last_values->{lookback_history};
+      foreach (@keys) {
+        $empty_events->{lookback_history}->{$_}->{$now} = $self->{$_};
+      }
+    }
     $empty_events;
   };
   $self->save_state(%params);
