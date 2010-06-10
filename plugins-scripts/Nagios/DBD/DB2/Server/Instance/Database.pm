@@ -190,7 +190,10 @@ sub init {
     }
   } elsif ($params{mode} =~ /server::instance::database::connectedusers/) {
     $self->{connected_users} = $self->{handle}->fetchrow_array(q{
-        SELECT COUNT(*) FROM sysibmadm.applications WHERE appl_status = 'CONNECTED'
+        #SELECT COUNT(*) FROM sysibmadm.applications WHERE appl_status = 'CONNECTED'
+        # there are a lot more stati than "connected". Applications can
+        # be connected although being in another state.
+        SELECT COUNT(*) FROM sysibmadm.applications
     });
   }
 }

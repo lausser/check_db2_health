@@ -124,6 +124,7 @@ Database user:
 
 Grant sysmon authority:
 db2inst1$ db2 update dbm cfg using sysmon_group nagios
+db2inst1$ db2 grant select,update on table SYSTOOLS.STMG_DBSIZE_INFO to nagios
 
 Switch on the performance counters:
 db2 update dbm cfg using dft_mon_bufpool   on

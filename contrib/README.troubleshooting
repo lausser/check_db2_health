@@ -1,0 +1,47 @@
+If you have problems connecting to the database, try this mini-script first.
+
+
+# fill in your parameters
+#
+my $database = '';
+#
+# if the database is not in the catalogue, add host + port
+#
+my $hostname = '';
+my $port = '50001';
+
+my $username = '';
+my $password = '';
+
+use strict;
+use warnings;
+my $dsn = "DBI:DB2:";
+if (! $hostname) {
+  # catalog tcpip node <host-nickname> remote <hostname> server <port>
+  # catalog database <remote-db> as <local-nick> at node <host-nickname>
+  $dsn .= $database;
+} else {
+  $dsn .= sprintf "DATABASE=%s; ", $database;
+  $dsn .= sprintf "HOSTNAME=%s; ", $hostname;
+  $dsn .= sprintf "PORT=%d; ", $port;
+  $dsn .= sprintf "PROTOCOL=TCPIP; ";
+  $dsn .= sprintf "UID=%s; ", $username;
+  $dsn .= sprintf "PWD=%s;", $password;
+}
+
+eval {
+  require DBI;
+  if (my $dbh = DBI->connect(
+      $dsn,
+      $username,
+      $password,
+      { RaiseError => 0, AutoCommit => 1, PrintError => 0 })) {
+    printf "OK - connected\n";
+  } else {
+    die DBI::errstr();
+  }
+};
+if ($@) {
+  printf "%s\n", $@;
+}
+
