@@ -2,6 +2,9 @@
 # Changelog of the check_db2_health plugin #
 ###############################################
 
+1.0.2 - 
+- bufferpool-hitration now uses hitratio_now to calculate the exitcode when --lookback is used.
+
 1.0.1 - 2010-06-10
 - bugfix for connected-users (only status CONNECTED was counted, but there are more). Thanks Niko
 - update in the README file. You need to grant select/update on SYSTOOLS.STMG_DBSIZE_INFO. Thanks Niko

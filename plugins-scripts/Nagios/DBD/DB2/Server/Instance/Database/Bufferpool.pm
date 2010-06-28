@@ -152,12 +152,13 @@ sub nagios {
   my %params = @_;
   if (! $self->{nagios_level}) {
     if ($params{mode} =~ /server::instance::database::bufferpool::hitratio(.*)/) {
+      my $refkey = 'hitratio'.($params{lookback} ? '_now' : '');
       $self->add_nagios(
-          $self->check_thresholds($self->{hitratio}, "98:", "90:"),
+          $self->check_thresholds($self->{$refkey}, "98:", "90:"),
               sprintf("bufferpool %s %shitratio is %.2f%%", 
               $self->{name},
               ($1 ? (($1 eq 'data') ? 'data page ' : 'index ') : ''),
-              $self->{hitratio})
+              $self->{$refkey})
       );
       $self->add_perfdata(sprintf "\'bp_%s_hitratio\'=%.2f%%;%s;%s",
           lc $self->{name},
