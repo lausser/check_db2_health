@@ -68,6 +68,9 @@ my @modes = (
   ['server::instance::database::logutilization',
       'log-utilization', undef,
       'Log utilization for a database' ],
+  ['server::instance::database::lastbackup',
+      'last-backup', undef,
+      'Time (in days) since the database was last backupped' ],
   ['server::instance::listdatabases',
       'list-databases', undef,
       'convenience function which lists all databases' ],
@@ -219,11 +222,24 @@ my @params = (
     "eyecandy",
     "encode",
     "units=s",
-    "3");
+    "3",
+    "with-mymodules-dyn-dir=s",
+    "extra-opts:s");
 
 if (! GetOptions(\%commandline, @params)) {
   print_help();
   exit $ERRORS{UNKNOWN};
+}
+
+if (exists $commandline{'extra-opts'}) {
+  # read the extra file and overwrite other parameters
+  my $extras = Extraopts->new(file => $commandline{'extra-opts'}, commandline => \%commandline);
+  if (! $extras->is_valid()) {
+    printf "extra-opts are not valid: %s\n", $extras->{errors};
+    exit $ERRORS{UNKNOWN};
+  } else {
+    $extras->overwrite();
+  }
 }
 
 if (exists $commandline{version}) {
@@ -270,7 +286,11 @@ if (exists $commandline{method}) {
   $commandline{method} = "dbi";
 }
 
-$DBD::DB2::Server::my_modules_dyn_dir = '#MYMODULES_DYN_DIR#';
+if (exists $commandline{'with-mymodules-dyn-dir'}) {
+  $DBD::DB2::Server::my_modules_dyn_dir = $commandline{'with-mymodules-dyn-dir'};
+} else {
+  $DBD::DB2::Server::my_modules_dyn_dir = '#MYMODULES_DYN_DIR#';
+}
 
 if (exists $commandline{environment}) {
   # if the desired environment variable values are different from

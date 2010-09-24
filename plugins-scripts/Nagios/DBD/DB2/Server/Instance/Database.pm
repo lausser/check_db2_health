@@ -195,6 +195,18 @@ sub init {
         # be connected although being in another state.
         SELECT COUNT(*) FROM sysibmadm.applications
     });
+  } elsif ($params{mode} =~ /server::instance::database::lastbackup/) {
+    if ($self->version_is_minimum('9.1')) {
+      my $sql = sprintf "SELECT (DAYS(current timestamp) - DAYS(last_backup)) * 86400 + (MIDNIGHT_SECONDS(current timestamp) - MIDNIGHT_SECONDS(last_backup)) FROM sysibm.sysdummy1, TABLE(snap_get_db_v91('%s', -2))", $self->{name};
+      $self->{last_backup} = $self->{handle}->fetchrow_array($sql);
+    } else {
+      my $sql = sprintf "SELECT last_backup FROM table(snap_get_db('%s', -2))",
+          $self->{name};
+      $self->{last_backup} = $self->{handle}->fetchrow_array($sql);
+    }
+    $self->{last_backup} = $self->{last_backup} ? $self->{last_backup} : 0;
+    # time is measured in days
+    $self->{last_backup} = $self->{last_backup} / 86400;
   }
 }
 
@@ -270,6 +282,14 @@ sub nagios {
           sprintf "index usage is %.2f%%", $self->{index_usage});
       $self->add_perfdata(sprintf "index_usage=%.2f%%;%s;%s",
           $self->{index_usage},
+          $self->{warningrange}, $self->{criticalrange});
+    } elsif ($params{mode} =~ /server::instance::database::lastbackup/) {
+      $self->add_nagios(
+          $self->check_thresholds($self->{last_backup}, '1', '2'),
+          sprintf "last backup of db %s was %.2f days ago",
+              $self->{name}, $self->{last_backup});
+      $self->add_perfdata(sprintf "last_backup=%.2f;%s;%s",
+          $self->{last_backup},
           $self->{warningrange}, $self->{criticalrange});
     }
   }

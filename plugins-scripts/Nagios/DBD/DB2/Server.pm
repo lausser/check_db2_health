@@ -51,8 +51,8 @@ sub new {
   bless $self, $class;
   $self->init_nagios();
   if ($self->dbconnect(%params)) {
-    #$self->{version} = $self->{handle}->fetchrow_array(
-    #    q{ SELECT version FROM v$instance });
+    $self->{version} = $self->{handle}->fetchrow_array(
+        q{ SELECT prod_release FROM sysibmadm.env_prod_info });
     #$self->{os} = $self->{handle}->fetchrow_array(
     #    q{ SELECT dbms_utility.port_string FROM dual });
     $self->{dbuser} = $self->{handle}->fetchrow_array(
