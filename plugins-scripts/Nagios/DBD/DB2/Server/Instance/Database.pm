@@ -178,7 +178,7 @@ sub init {
   } elsif ($params{mode} =~ /server::instance::database::indexusage/) {
     ($self->{rows_read}, $self->{rows_selected}) = $params{handle}->fetchrow_array(q{
         SELECT
-            rows_read, rows_selected
+            rows_read, (rows_selected + rows_inserted + rows_updated + rows_deleted)
         FROM
             sysibmadm.snapdb
     });
@@ -196,17 +196,56 @@ sub init {
         SELECT COUNT(*) FROM sysibmadm.applications
     });
   } elsif ($params{mode} =~ /server::instance::database::lastbackup/) {
+    my $sql = undef;
     if ($self->version_is_minimum('9.1')) {
-      my $sql = sprintf "SELECT (DAYS(current timestamp) - DAYS(last_backup)) * 86400 + (MIDNIGHT_SECONDS(current timestamp) - MIDNIGHT_SECONDS(last_backup)) FROM sysibm.sysdummy1, TABLE(snap_get_db_v91('%s', -2))", $self->{name};
-      $self->{last_backup} = $self->{handle}->fetchrow_array($sql);
+      $sql = sprintf "SELECT (DAYS(current timestamp) - DAYS(last_backup)) * 86400 + (MIDNIGHT_SECONDS(current timestamp) - MIDNIGHT_SECONDS(last_backup)) FROM sysibm.sysdummy1, TABLE(snap_get_db_v91('%s', -2))", $self->{name};
     } else {
-      my $sql = sprintf "SELECT last_backup FROM table(snap_get_db('%s', -2))",
+      $sql = sprintf "SELECT last_backup FROM table(snap_get_db('%s', -2))",
           $self->{name};
-      $self->{last_backup} = $self->{handle}->fetchrow_array($sql);
     }
+    $self->{last_backup} = $self->{handle}->fetchrow_array($sql);
     $self->{last_backup} = $self->{last_backup} ? $self->{last_backup} : 0;
     # time is measured in days
     $self->{last_backup} = $self->{last_backup} / 86400;
+  } elsif ($params{mode} =~ /server::instance::database::staletablerunstats/) {
+    @{$self->{stale_tables}} = $self->{handle}->fetchall_array(q{
+      SELECT LOWER(TRIM(tabschema)||'.'||TRIM(tabname)), 
+      (DAYS(current timestamp) - DAYS(COALESCE(stats_time, '1970-01-01-00.00.00'))) * 86400 + (MIDNIGHT_SECONDS(current timestamp) - MIDNIGHT_SECONDS(COALESCE(stats_time, '1970-01-01-00.00.00'))) FROM syscat.tables
+    });
+    if ($params{selectname} && $params{regexp}) {
+      @{$self->{stale_tables}} = grep { $_->[0] =~ $params{selectname} }
+          @{$self->{stale_tables}};
+    } elsif ($params{selectname}) {
+      @{$self->{stale_tables}} = grep { $_->[0] eq $params{selectname} }
+          @{$self->{stale_tables}};
+    }
+    # time is measured in days
+    @{$self->{stale_tables}} = map { $_->[1] = $_->[1] / 86400; $_; } @{$self->{stale_tables}};
+  } elsif ($params{mode} =~ /server::instance::database::sortoverflows/) {
+    my $sql = undef;
+    if ($self->version_is_minimum('9.1')) {
+      $sql = sprintf "SELECT sort_overflows FROM TABLE(snap_get_db_v91('%s', -2))",
+          $self->{name};
+    } else {
+      $sql = sprintf "SELECT sort_overflows FROM TABLE(snap_get_db('%s', -2))",
+          $self->{name};
+    }
+    $self->{sort_overflows} = $self->{handle}->fetchrow_array($sql);
+    $self->valdiff(\%params, qw(sort_overflows));
+    $self->{sort_overflows_per_sec} = $self->{delta_sort_overflows} / $self->{delta_timestamp};
+  } elsif ($params{mode} =~ /server::instance::database::sortoverflowpercentage/) {
+    my $sql = undef;
+    if ($self->version_is_minimum('9.1')) {
+      $sql = sprintf "SELECT sort_overflows, total_sorts FROM TABLE(snap_get_db_v91('%s', -2))",
+          $self->{name};
+    } else {
+      $sql = sprintf "SELECT sort_overflows, total_sorts FROM TABLE(snap_get_db('%s', -2))",
+          $self->{name};
+    }
+    ($self->{sort_overflows}, $self->{total_sorts}) = $self->{handle}->fetchrow_array($sql);
+    $self->valdiff(\%params, qw(sort_overflows total_sorts));
+    $self->{sort_overflow_percentage} = $self->{delta_total_sorts} == 0 ? 0 :
+        $self->{delta_sort_overflows} / $self->{delta_total_sorts};
   }
 }
 
@@ -290,6 +329,35 @@ sub nagios {
               $self->{name}, $self->{last_backup});
       $self->add_perfdata(sprintf "last_backup=%.2f;%s;%s",
           $self->{last_backup},
+          $self->{warningrange}, $self->{criticalrange});
+    } elsif ($params{mode} =~ /server::instance::database::staletablerunstats/) {
+      # we only use warnings here
+      $self->check_thresholds(0, 7, 99999);
+      @{$self->{stale_tables}} = grep { $_->[1] >= $self->{warningrange} }
+          @{$self->{stale_tables}};
+      if (@{$self->{stale_tables}}) {
+        $self->add_nagios_warning(sprintf '%d tables have outdated statistics', 
+            scalar(@{$self->{stale_tables}}));
+        foreach (@{$self->{stale_tables}}) {
+          $self->add_nagios_warning(sprintf '%s:%.02f', $_->[0], $_->[1]);
+        }
+      } else {
+        $self->add_nagios_ok('table statistics are up to date');
+      }
+    } elsif ($params{mode} =~ /server::instance::database::sortoverflows/) {
+      printf STDERR "%s\n", Data::Dumper::Dumper($self->{sort_overflows_per_sec});
+      $self->add_nagios(
+          $self->check_thresholds($self->{sort_overflows_per_sec}, 0.01, 0.1),       
+          sprintf "%.2f sort overflows per sec", $self->{sort_overflows_per_sec});
+      $self->add_perfdata(sprintf "sort_overflows_per_sec=%.2f;%s;%s",
+          $self->{sort_overflows_per_sec},
+          $self->{warningrange}, $self->{criticalrange});
+    } elsif ($params{mode} =~ /server::instance::database::sortoverflowpercentage/) {
+      $self->add_nagios(
+          $self->check_thresholds($self->{sort_overflow_percentage}, 5, 10),       
+          sprintf "%.2f%% of all sorts used temporary disk space", $self->{sort_overflow_percentage});
+      $self->add_perfdata(sprintf "sort_overflow_percentage=%.2f%%;%s;%s",
+          $self->{sort_overflow_percentage},
           $self->{warningrange}, $self->{criticalrange});
     }
   }
