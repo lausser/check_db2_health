@@ -5,9 +5,6 @@
 1.0.2 - 
 - bufferpool-hitratio now uses hitratio_now to calculate the exitcode when --lookback is used.
 - add mode last-backup
-- index-usage takes delete- and insert-statements into account
-- add mode sort-overflows
-- add mode sort-overflow-percentage
 
 1.0.1 - 2010-06-10
 - bugfix for connected-users (only status CONNECTED was counted, but there are more). Thanks Niko
