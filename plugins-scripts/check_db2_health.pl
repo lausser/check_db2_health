@@ -220,6 +220,7 @@ my @params = (
     "perfdata",
     "warning=s",
     "critical=s",
+    "dbthresholds:s",
     "absolute|a",
     "basis",
     "lookback|l=i",
@@ -233,6 +234,7 @@ my @params = (
     "units=s",
     "3",
     "with-mymodules-dyn-dir=s",
+    "report=s",
     "extra-opts:s");
 
 if (! GetOptions(\%commandline, @params)) {
@@ -293,6 +295,12 @@ if (exists $commandline{method}) {
   # dbi, snmp or sqlplus
 } else {
   $commandline{method} = "dbi";
+}
+
+if (exists $commandline{report}) {
+  # short, long, html
+} else {
+  $commandline{report} = "long";
 }
 
 if (exists $commandline{'with-mymodules-dyn-dir'}) {
@@ -427,6 +435,7 @@ my %params = (
            ( defined $_->[2] && grep { $commandline{mode} eq $_ } @{$_->[2]}) 
         } @modes
     )[0],
+    cmdlinemode => $commandline{mode},
     method => ($commandline{method} ||
         $ENV{NAGIOS__SERVICEDB2_METH} ||
         $ENV{NAGIOS__HOSTDB2_METH} || 'dbi'),
@@ -447,6 +456,7 @@ my %params = (
         $ENV{NAGIOS__HOSTDB2_DATABASE}),
     warningrange => $commandline{warning},
     criticalrange => $commandline{critical},
+    dbthresholds => $commandline{dbthresholds},
     absolute => $commandline{absolute},
     lookback => $commandline{lookback},
     tablespace => $commandline{tablespace},
@@ -459,6 +469,8 @@ my %params = (
     units => $commandline{units},
     eyecandy => $commandline{eyecandy},
     statefilesdir => $STATEFILESDIR,
+    verbose => $commandline{verbose},
+    report => $commandline{report},
 );
 my $server = undef;
 

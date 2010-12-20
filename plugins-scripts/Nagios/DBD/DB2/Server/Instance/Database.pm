@@ -106,6 +106,7 @@ sub init {
   my $self = shift;
   my %params = @_;
   $self->init_nagios();
+  $self->set_local_db_thresholds(%params);
   if (($params{mode} =~ /server::instance::database::listtablespaces/) ||
       ($params{mode} =~ /server::instance::database::tablespace/)) {
     DBD::DB2::Server::Instance::Database::Tablespace::init_tablespaces(%params);

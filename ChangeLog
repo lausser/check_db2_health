@@ -2,6 +2,12 @@
 # Changelog of the check_db2_health plugin #
 ###############################################
 
+1.0.3 - 2010-12-20
+- fixed a bug in connected-users. Thanks Alexander Titze
+- mode sql can now have a non-numerical output which is compared to a string/regexp
+- new parameter --dbthresholds
+- new mode report can be used to output only the bad news (short,long,html)
+
 1.0.2 - 2010-09-29
 - bufferpool-hitratio now uses hitratio_now to calculate the exitcode when --lookback is used.
 - add mode last-backup
