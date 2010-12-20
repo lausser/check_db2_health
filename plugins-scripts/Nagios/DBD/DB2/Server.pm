@@ -73,6 +73,7 @@ sub init {
   my $self = shift;
   my %params = @_;
   $params{handle} = $self->{handle};
+  $self->set_global_db_thresholds(\%params);
   if ($params{mode} =~ /^server::instance/) {
     $self->{instance} = DBD::DB2::Server::Instance->new(%params);
   } elsif ($params{mode} =~ /^server::database/) {
