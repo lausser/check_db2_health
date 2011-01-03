@@ -2,6 +2,9 @@
 # Changelog of the check_db2_health plugin #
 ###############################################
 
+1.0.3.1 - 2011-01-03
+- bugfix in --mode sql (numeric vs. regexp result)
+
 1.0.3 - 2010-12-20
 - fixed a bug in connected-users. Thanks Alexander Titze
 - mode sql can now have a non-numerical output which is compared to a string/regexp
