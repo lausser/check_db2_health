@@ -558,7 +558,22 @@ sub save_state {
   my $self = shift;
   my %params = @_;
   my $extension = "";
-  mkdir $params{statefilesdir} unless -d $params{statefilesdir};
+  if ($^O =~ /MSWin/) {
+    $mode =~ s/::/_/g;
+    $params{statefilesdir} = $self->system_vartmpdir();
+  }
+  if (! -d $params{statefilesdir}) {
+    eval {
+      use File::Path;
+      mkpath $params{statefilesdir};
+    };
+  }
+  if ($@ || ! -w $params{statefilesdir}) {
+    $self->add_nagios($ERRORS{CRITICAL},
+        sprintf "statefilesdir %s does not exist or is not writable\n",
+        $params{statefilesdir});
+    return;
+  }
   my $statefile = sprintf "%s/%s", 
       $params{statefilesdir}, $params{mode};
   $extension .= $params{differenciator} ? "_".$params{differenciator} : "";

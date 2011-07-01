@@ -210,9 +210,17 @@ sub init {
     $self->{last_backup} = $self->{last_backup} / 86400;
   } elsif ($params{mode} =~ /server::instance::database::staletablerunstats/) {
     @{$self->{stale_tables}} = $self->{handle}->fetchall_array(q{
-      SELECT LOWER(TRIM(tabschema)||'.'||TRIM(tabname)), 
-      (DAYS(current timestamp) - DAYS(COALESCE(stats_time, '1970-01-01-00.00.00'))) * 86400 + (MIDNIGHT_SECONDS(current timestamp) - MIDNIGHT_SECONDS(COALESCE(stats_time, '1970-01-01-00.00.00'))) FROM syscat.tables
+      SELECT
+        LOWER(TRIM(tabschema)||'.'||TRIM(tabname)), 
+        (DAYS(current timestamp) - DAYS(COALESCE(stats_time, '1970-01-01-00.00.00'))) * 86400 + (MIDNIGHT_SECONDS(current timestamp) - MIDNIGHT_SECONDS(COALESCE(stats_time, '1970-01-01-00.00.00')))
+      FROM
+        syscat.tables
+      WHERE type in ('S', 'T')
+        AND create_time < (current timestamp - 1 day)
     });
+    # ('S', 'T') means: only tables and materialized query tables, not views, aliases etc
+    # (current timestamp - 1 day) means: don't check objects which were just 
+    #  created. wait at least one day so that stats can be generated
     if ($params{selectname} && $params{regexp}) {
       @{$self->{stale_tables}} = grep { $_->[0] =~ $params{selectname} }
           @{$self->{stale_tables}};
