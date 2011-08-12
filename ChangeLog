@@ -2,6 +2,9 @@
 # Changelog of the check_db2_health plugin #
 ###############################################
 
+1.0.4 - 2011-08-12
+- fix a bug in save_state with capital letters in statefilesdir
+
 1.0.3.3 - 2011-07-01
 - change stale-table-runstats so there are less unnecessary alerts (Thanks Niko v. Koeckritz)
 
