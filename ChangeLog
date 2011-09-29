@@ -2,10 +2,11 @@
 # Changelog of the check_db2_health plugin #
 ###############################################
 
-1.0.4 - 2011-08-12
+1.0.4 - 2011-09-29
 - fix a bug in save_state with capital letters in statefilesdir
+- single ticks around the --name argument under Windows CMD will be removed automatically 
 
-1.0.3.3 - 2011-07-01
+ 1.0.3.3 - 2011-07-01
 - change stale-table-runstats so there are less unnecessary alerts (Thanks Niko v. Koeckritz)
 
 1.0.3.2 - 2011-06-03
