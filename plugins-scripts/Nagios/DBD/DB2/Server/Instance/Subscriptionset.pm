@@ -30,7 +30,7 @@ our @ISA = qw(DBD::DB2::Server::Instance);
     my $num_subscriptionsets = 0;
     if (($params{mode} =~ /server::instance::replication::listsubscriptionsets/) ||
         ($params{mode} =~ /server::instance::replication::subscriptionlatency/)) {
-      @subscriptionsetresult = $params{handle}->fetchall_array(q{
+      my @subscriptionsetresult = $params{handle}->fetchall_array(q{
           SELECT
               apply_qual,
               set_name,
@@ -54,13 +54,13 @@ our @ISA = qw(DBD::DB2::Server::Instance);
         my %thisparams = %params;
         $thisparams{apply_qual} = $apply_qual;
         $thisparams{set_name} = $set_name;
-        $thisparams{now} = $self->convert_db2_timestamp($now);
-        $thisparams{lastrun} = $self->convert_db2_timestamp($lastrun);
-        $thisparams{lastsuccess} = $self->convert_db2_timestamp($lastsuccess);
-        $thisparams{synchtime} = $self->convert_db2_timestamp($synchtime);
-        $thisparams{source_conn_time} = $self->convert_db2_timestamp($source_conn_time);
-        $thisparams{endtime} = $self->convert_db2_timestamp($endtime);
-        my $subscriptionset = DBD::Oracle::Server::Database::Tablespace->new(
+        $thisparams{now} = DBD::DB2::Server::convert_db2_timestamp($now);
+        $thisparams{lastrun} = DBD::DB2::Server::convert_db2_timestamp($lastrun);
+        $thisparams{lastsuccess} = DBD::DB2::Server::convert_db2_timestamp($lastsuccess);
+        $thisparams{synchtime} = DBD::DB2::Server::convert_db2_timestamp($synchtime);
+        $thisparams{source_conn_time} = DBD::DB2::Server::convert_db2_timestamp($source_conn_time);
+        $thisparams{endtime} = DBD::DB2::Server::convert_db2_timestamp($endtime);
+        my $subscriptionset = DBD::DB2::Server::Subscriptionset->new(
             %thisparams);
         add_subscriptionset($subscriptionset);
         $num_subscriptionsets++;
