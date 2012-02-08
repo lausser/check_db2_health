@@ -111,8 +111,9 @@ sub nagios {
      # last successful < last run
      # and last run in the near past
       $self->add_nagios(
-          $self->check_thresholds($self->{end_to_end_latency}, 600, 1200),       
-          sprintf "%s/%s latency is %.3f%s", $self->{end_to_end_latency});
+          $self->check_thresholds($self->{end_to_end_latency}, 600, 1200),
+          sprintf "%s/%s latency is %.3f%s",
+          $self->{apply_qual}, $self->{set_name}, $self->{end_to_end_latency});
       $self->add_perfdata(sprintf "end_to_end_latency=%.3f;%s;%s",
           $self->{end_to_end_latency},
           $self->{warningrange}, $self->{criticalrange});
