@@ -80,7 +80,7 @@ my @modes = (
   ['server::instance::replication::capturelatency',
       'capture-latency', undef,
       'Latency of the data processed by the capture program' ],
-  ['server::instance::replication::subscriptionlatency',
+  ['server::instance::replication::subscriptionsets::subscriptionlatency',
       'subscription-set-latency', undef,
       'Latency of the subscription set(s)' ],
   ['server::instance::database::lastbackup',
@@ -95,7 +95,7 @@ my @modes = (
   ['server::instance::database::listbufferpools',
       'list-bufferpools', undef,
       'convenience function which lists all buffer pools' ],
-  ['server::instance::replication::listsubscriptionsets',
+  ['server::instance::replication::subscriptionsets::listsubscriptionsets',
       'list-subscription-sets', undef,
       'convenience function which lists all subscription sets' ],
   #  health SELECT * FROM TABLE(HEALTH_DB_HI('',-1)) AS T
