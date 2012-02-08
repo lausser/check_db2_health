@@ -99,7 +99,7 @@ sub init {
     $self->{run_lag} = $self->{now} - $self->{lastrun};
     $self->{success_lag} = $self->{now} - $self->{lastsuccess};
     $self->{latency} = $self->{now} - $self->{synchtime};
-    $self->{end_to_end_latency} = $self->{endtime} - $self->{lastrun} + ($self->{source_conn_time} - $self->{synchtime});
+    $self->{end_to_end_latency} = ($self->{endtime} - $self->{lastrun}) + ($self->{source_conn_time} - $self->{synchtime});
   }
 }
 
@@ -112,8 +112,8 @@ sub nagios {
      # and last run in the near past
       $self->add_nagios(
           $self->check_thresholds($self->{end_to_end_latency}, 600, 1200),       
-          sprintf "synchronous read percentage is %.2f%%", $self->{srp});
-      $self->add_perfdata(sprintf "end_to_end_latency=%.2f%%;%s;%s",
+          sprintf "%s/%s latency is %.3f%s", $self->{end_to_end_latency});
+      $self->add_perfdata(sprintf "end_to_end_latency=%.3f;%s;%s",
           $self->{end_to_end_latency},
           $self->{warningrange}, $self->{criticalrange});
     }

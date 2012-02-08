@@ -807,11 +807,11 @@ sub convert_db2_timestamp {
   my $self = shift;
   my $timestamp = shift;
   # 2012-02-08-13.53.18.338770
-  if ($timestamp =~ /^(\d\d\d\d)-(\d\d)-(\d\d)-(\d\d)\.(\d\d)\.(\d\d)(\.\d+)?$/ ||
-      $timestamp =~ /^(\d\d\d\d)-(\d\d)-(\d\d)\s(\d\d):(\d\d):(\d\d)(\.\d+)?$/) {
+  if ($timestamp =~ /^(\d\d\d\d)-(\d\d)-(\d\d)-(\d\d)\.(\d\d)\.(\d\d)\.(\d+)?$/ ||
+      $timestamp =~ /^(\d\d\d\d)-(\d\d)-(\d\d)\s(\d\d):(\d\d):(\d\d)\.(\d+)?$/) {
     # $sec,$min,$hours,$mday,$mon,$year
     # 6    5    4      3     2    1, mon=0..11
-    my $epoch = timelocal($6, $5, $4, $3, $2 - 1, $1);
+    my $epoch = timelocal($6, $5, $4, $3, $2 - 1, $1) + $7 / 1000000;
     printf STDERR "epoch is %d\n", $epoch;
     return $epoch;
   } else {
