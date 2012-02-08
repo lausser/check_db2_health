@@ -28,8 +28,8 @@ our @ISA = qw(DBD::DB2::Server::Instance);
     # name = apply_qual / die eindeutige kennung des apply-programms, ...
     # name2 = set_name / der name der subskriptionsgruppe ...
     my $num_subscriptionsets = 0;
-    if (($params{mode} =~ /server::instance::replication::listsubscriptionsets/) ||
-        ($params{mode} =~ /server::instance::replication::subscriptionlatency/)) {
+    if (($params{mode} =~ /server::instance::replication::subscriptionsets::listsubscriptionsets/) ||
+        ($params{mode} =~ /server::instance::replication::subscriptionsets::subscriptionlatency/)) {
       my @subscriptionsetresult = $params{handle}->fetchall_array(q{
           SELECT
               apply_qual,
@@ -95,7 +95,7 @@ sub init {
   my %params = @_;
   $self->init_nagios();
   $self->set_local_db_thresholds(%params);
-  if (($params{mode} =~ /server::instance::replication::subscriptionlatency/)) {
+  if (($params{mode} =~ /server::instance::replication::subscriptionsets::subscriptionlatency/)) {
     $self->{run_lag} = $self->{now} - $self->{lastrun};
     $self->{success_lag} = $self->{now} - $self->{lastsuccess};
     $self->{latency} = $self->{now} - $self->{synchtime};
@@ -107,7 +107,7 @@ sub nagios {
   my $self = shift;
   my %params = @_;
   if (! $self->{nagios_level}) {
-    if ($params{mode} =~ /server::instance::replication::subscriptionlatency/) {
+    if ($params{mode} =~ /server::instance::replication::subscriptionsets::subscriptionlatency/) {
      # last successful < last run
      # and last run in the near past
       $self->add_nagios(
