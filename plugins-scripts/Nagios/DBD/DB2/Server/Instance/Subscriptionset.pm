@@ -95,7 +95,7 @@ sub init {
   my %params = @_;
   $self->init_nagios();
   $self->set_local_db_thresholds(%params);
-  if (($params{mode} =~ /server::instance::replication::subscriptionlatency/) {
+  if (($params{mode} =~ /server::instance::replication::subscriptionlatency/)) {
     $self->{run_lag} = $self->{now} - $self->{lastrun};
     $self->{success_lag} = $self->{now} - $self->{lastsuccess};
     $self->{latency} = $self->{now} - $self->{synchtime};
@@ -107,13 +107,7 @@ sub nagios {
   my $self = shift;
   my %params = @_;
   if (! $self->{nagios_level}) {
-
-    if ($params{mode} =~ /server::instance::subscriptionset::listsubscriptionsets/) {
-      foreach (sort { $a->{apply_qual} cmp $b->{apply_qual}; }  @{$self->{subscriptionsets}}) {
-	printf "%s %s\n", $_->{apply_qual}, $_->{set_name};
-      }
-      $self->add_nagios_ok("have fun");
-    } elsif (($params{mode} =~ /server::instance::replication::subscriptionlatency/) {
+    if (($params{mode} =~ /server::instance::replication::subscriptionlatency/) {
      # last successful < last run
      # and last run in the near past
       $self->add_nagios(

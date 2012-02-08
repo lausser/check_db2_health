@@ -46,34 +46,17 @@ sub init {
         WHERE 
             monitor_time > (current timestamp - ? minutes)}, $lookback);
     if (! defined $self->{delay}) {
-      $self->add_nagios_critical("unable to aquire delay info");
+      $self->add_nagios_critical("unable to aquire capture delay info");
     }
-  } elsif (($params{mode} =~ /server::instance::replication::subscriptionlatency/)) {
-    my $lookback = $params{lookback} || 30;
-    # reihenweise pro set-->neue klasse
-    $self->{subscription_latency} = $params{handle}->fetchrow_array(q{
-SELECT ACTIVATE, STATUS, APPLY_QUAL, SET_NAME, WHOS_ON_FIRST,
-SECOND(CURRENT TIMESTAMP - LASTRUN) +
-((MINUTE(CURRENT TIMESTAMP) - MINUTE(LASTRUN)) * 60) +
-((HOUR (CURRENT TIMESTAMP) - HOUR (LASTRUN)) * 3600) +
-((DAYS (CURRENT TIMESTAMP) - DAYS (LASTRUN)) * 86400)
-AS SET_RUN_LAG,
-SECOND(CURRENT TIMESTAMP - LASTSUCCESS) +
-((MINUTE(CURRENT TIMESTAMP) - MINUTE(LASTSUCCESS)) * 60) +
-((HOUR (CURRENT TIMESTAMP) - HOUR (LASTSUCCESS)) * 3600) +
-((DAYS (CURRENT TIMESTAMP) - DAYS (LASTSUCCESS)) * 86400)
-AS SET_SUCCESS_LAG,
-SECOND(CURRENT TIMESTAMP - SYNCHTIME) +
-((MINUTE(CURRENT TIMESTAMP) - MINUTE(SYNCHTIME)) * 60) +
-((HOUR (CURRENT TIMESTAMP) - HOUR (SYNCHTIME)) * 3600) +
-((DAYS (CURRENT TIMESTAMP) - DAYS (SYNCHTIME)) * 86400)
-AS SET_LATENCY
-FROM ASN.IBMSNAP_SUBS_SET
-WHERE APPLY_QUAL = ?
-AND SET_NAME = ?
-    });
-
-  } elsif (($params{mode} =~ /server::instance::replication/)) {
+  } elsif (($params{mode} =~ /server::instance::replication::listsubscriptionsets/) ||
+      ($params{mode} =~ /server::instance::replication::subscriptionlatency/)) {
+    DBD::DB2::Server::Instance::Subscriptionset::init_subscriptionsets(%params);
+    if (my @subscriptionsets =
+        DBD::DB2::Server::Instance::Subscriptionset::return_subscriptionsets()) {
+      $self->{subscriptionsets} = \@subscriptionsets;
+    } else {
+      $self->add_nagios_critical("unable to aquire subscription set info");
+    }
   }
 }
 
@@ -91,6 +74,11 @@ sub nagios {
         $_->nagios(%params);
         $self->merge_nagios($_);
       }
+    } elsif ($params{mode} =~ /server::instance::subscriptionset::listsubscriptionsets/) {
+      foreach (sort { $a->{apply_qual} cmp $b->{apply_qual}; }  @{$self->{subscriptionsets}}) {
+        printf "%s %s\n", $_->{apply_qual}, $_->{set_name};
+      }
+      $self->add_nagios_ok("have fun");
     } elsif ($params{mode} =~ /server::instance::replication::capturelatency/) {
       $self->add_nagios(
           $self->check_thresholds($self->{capture_latency}, "10", "60"),

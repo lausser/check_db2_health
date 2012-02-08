@@ -95,6 +95,9 @@ my @modes = (
   ['server::instance::database::listbufferpools',
       'list-bufferpools', undef,
       'convenience function which lists all buffer pools' ],
+  ['server::instance::replication::listsubscriptionsets',
+      'list-subscription-sets', undef,
+      'convenience function which lists all subscription sets' ],
   #  health SELECT * FROM TABLE(HEALTH_DB_HI('',-1)) AS T
 );
 
