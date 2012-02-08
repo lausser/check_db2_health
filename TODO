@@ -2,3 +2,23 @@ http://books.google.de/books?id=MGBs3rOfQvwC&pg=PT158&lpg=PT158&dq=log_utilizati
 long running sql
 
 
+replication:
+4. capture latency
+http://www-01.ibm.com/support/docview.wss?uid=swg21245393
+SELECT MONITOR_TIME, DECIMAL(MONITOR_TIME - SYNCHTIME) FROM ASN.IBMSNAP_CAPMON ORDER BY MONITOR_TIME DESC ;
+
+8. subscription delay
+http://www.redbooks.ibm.com/redbooks/pdfs/sg245463.pdf 5.4.4.4
+
+db2 "select * from asn.ibmsnap_applytrail order by lastrun desc with ur " | pg
+ 
+APPLY_QUAL SET_NAME SET_TYPE WHOS_ON_FIRST ASNLOAD FULL_REFRESH EFFECTIVE_MEMBERS SET_INSERTED SET_DELETED SET_UPDATED SET_REWORKED SET_REJECTED_TRXS STATUS LASTRUN LASTSUCCESS SYNCHPOINT SYNCHTIME SOURCE_SERVER SOURCE_ALIAS SOURCE_OWNER SOURCE_TABLE SOURCE_VIEW_QUAL TARGET_SERVER TARGET_ALIAS TARGET_OWNER TARGET_TABLE CAPTURE_SCHEMA TGT_CAPTURE_SCHEMA FEDERATED_SRC_SRVR FEDERATED_TGT_SRVR JRN_LIB JRN_NAME COMMIT_COUNT OPTION_FLAGS EVENT_NAME ENDTIME SOURCE_CONN_TIME SQLSTATE SQLCODE SQLERRP SQLERRM APPERRM
+ ------------------ ------------------ -------- ------------- ------- ------------ ----------------- ------------ ----------- ----------- ------------ ----------------- ------ -------------------------- -------------------------- ----------------------- -------------------------- ------------------ ------------ ------------------------------ -------------------------------------------------------------------------------------------------------------------------------- ---------------- ------------------ ------------ ------------------------------ -------------------------------------------------------------------------------------------------------------------------------- ------------------------------ ------------------------------ ------------------ ------------------ ---------- ---------- ------------ ------------ ------------------ -------------------------- -------------------------- -------- ----------- -------- ---------------------------------------------------------------------- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ EAI2MISQ1 EAI2MISS1 R S - - - 0 0 0 0 0 -1 2007-05-21-08.24.01.484509 2007-05-21-08.23.12.809407 x'4651498F000000010000' 2007-05-21-07.26.07.000000 OIP - GAM VD_CUSTOMER 1 MIS - EAI CUSTOMER ASN ASN - - - - - NNNN - 2007-05-21-08.24.01.610647 2007-05-21-08.24.01.544292 - - - - ASN1054E APPLY "EAI2MISQ1" : "WorkerThread". The Apply program could not find a row in the IBMSNAP_REGISTER or IBMSNAP_PRUNCNTL table that corresponds to the subscription set member with a set name "EAI2MISS1", for source owner "EAI", source table "VD_CUSTOMER", and source view qualifier "1".
+ 
+
+
+
+end-to-end
+select (ENDTIME - LASTRUN) + (SOURCE_CONN_TIME - SYNCHTIME) ,ENDTIME,LASTRUN,SOURCE_CONN_TIME,SYNCHTIME
+     from asn.IBMSNAP_APPLYTRAIL order by ENDTIME desc

@@ -36,6 +36,44 @@ sub init {
     } else {
       $self->add_nagios_critical("unable to aquire database info");
     }
+  } elsif (($params{mode} =~ /server::instance::replication::capturelatency/)) {
+    my $lookback = $params{lookback} || 30;
+    $self->{capture_latency} = $params{handle}->fetchrow_array(q{
+        SELECT
+            COALESCE(AVG(TIMESTAMPDIFF(1, CHAR((monitor_time - synctime)))), 0)
+        FROM
+            asn.ibmsnap_capmon 
+        WHERE 
+            monitor_time > (current timestamp - ? minutes)}, $lookback);
+    if (! defined $self->{delay}) {
+      $self->add_nagios_critical("unable to aquire delay info");
+    }
+  } elsif (($params{mode} =~ /server::instance::replication::subscriptionlatency/)) {
+    my $lookback = $params{lookback} || 30;
+    # reihenweise pro set-->neue klasse
+    $self->{subscription_latency} = $params{handle}->fetchrow_array(q{
+SELECT ACTIVATE, STATUS, APPLY_QUAL, SET_NAME, WHOS_ON_FIRST,
+SECOND(CURRENT TIMESTAMP - LASTRUN) +
+((MINUTE(CURRENT TIMESTAMP) - MINUTE(LASTRUN)) * 60) +
+((HOUR (CURRENT TIMESTAMP) - HOUR (LASTRUN)) * 3600) +
+((DAYS (CURRENT TIMESTAMP) - DAYS (LASTRUN)) * 86400)
+AS SET_RUN_LAG,
+SECOND(CURRENT TIMESTAMP - LASTSUCCESS) +
+((MINUTE(CURRENT TIMESTAMP) - MINUTE(LASTSUCCESS)) * 60) +
+((HOUR (CURRENT TIMESTAMP) - HOUR (LASTSUCCESS)) * 3600) +
+((DAYS (CURRENT TIMESTAMP) - DAYS (LASTSUCCESS)) * 86400)
+AS SET_SUCCESS_LAG,
+SECOND(CURRENT TIMESTAMP - SYNCHTIME) +
+((MINUTE(CURRENT TIMESTAMP) - MINUTE(SYNCHTIME)) * 60) +
+((HOUR (CURRENT TIMESTAMP) - HOUR (SYNCHTIME)) * 3600) +
+((DAYS (CURRENT TIMESTAMP) - DAYS (SYNCHTIME)) * 86400)
+AS SET_LATENCY
+FROM ASN.IBMSNAP_SUBS_SET
+WHERE APPLY_QUAL = ?
+AND SET_NAME = ?
+    });
+
+  } elsif (($params{mode} =~ /server::instance::replication/)) {
   }
 }
 
@@ -53,6 +91,15 @@ sub nagios {
         $_->nagios(%params);
         $self->merge_nagios($_);
       }
+    } elsif ($params{mode} =~ /server::instance::replication::capturelatency/) {
+      $self->add_nagios(
+          $self->check_thresholds($self->{capture_latency}, "10", "60"),
+              sprintf "capture latency at %.2fs", $self->{capture_latency});
+      $self->add_perfdata(sprintf "capture_latency=%.2f%;%s;%s",
+          $self->{capture_latency},
+          $self->{warningrange}, $self->{criticalrange});
+
+    } elsif ($params{mode} =~ /server::instance::replication/) {
     }
   }
 }

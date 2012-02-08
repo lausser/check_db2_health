@@ -13,6 +13,7 @@ EXTRA_MODULES=\
   Nagios/DBD/DB2/Server/Instance/Database/Bufferpool.pm \
   Nagios/DBD/DB2/Server/Instance/Database/Partition.pm \
   Nagios/DBD/DB2/Server/Instance/Database/Lock.pm \
+  Nagios/DBD/DB2/Server/Instance/Subscriptionset.pm \
   Nagios/DBD/DB2/Server.pm \
   Nagios/Extraopts.pm
 EXTRA_DIST=check_db2_health.pl $(EXTRA_MODULES)

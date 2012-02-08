@@ -2,6 +2,7 @@ package DBD::DB2::Server;
 
 use strict;
 use Time::HiRes;
+use Time::Local;
 use IO::File;
 use File::Copy 'cp';
 use Data::Dumper;
@@ -802,6 +803,21 @@ sub system_tmpdir {
   }
 }
 
+sub convert_db2_timestamp {
+  my $self = shift;
+  my $timestamp = shift;
+  # 2012-02-08-13.53.18.338770
+  if ($timestamp =~ /^(\d\d\d\d)-(\d\d)-(\d\d)-(\d\d)\.(\d\d)\.(\d\d)(\.\d+)?$/ ||
+      $timestamp =~ /^(\d\d\d\d)-(\d\d)-(\d\d)\s(\d\d):(\d\d):(\d\d)(\.\d+)?$/) {
+    # $sec,$min,$hours,$mday,$mon,$year
+    # 6    5    4      3     2    1, mon=0..11
+    my $epoch = timelocal($6, $5, $4, $3, $2 - 1, $1);
+    printf STDERR "epoch is %d\n", $epoch;
+    return $epoch;
+  } else {
+  }
+}
+
 
 package DBD::DB2::Server::Connection;
 
@@ -887,14 +903,17 @@ sub init {
     eval {
       require DBI;
       use POSIX ':signal_h';
-      local $SIG{'ALRM'} = sub {
-        die "alarm\n";
-      };
-      my $mask = POSIX::SigSet->new( SIGALRM );
-      my $action = POSIX::SigAction->new(
-          sub { die "alarm\n" ; }, $mask);
-      my $oldaction = POSIX::SigAction->new();
-      sigaction(SIGALRM ,$action ,$oldaction );
+      if ($^O =~ /MSWin/) {
+        local $SIG{'ALRM'} = sub {
+          die "alarm\n";
+        };
+      } else {
+        my $mask = POSIX::SigSet->new( SIGALRM );
+        my $action = POSIX::SigAction->new(
+            sub { die "alarm\n" ; }, $mask);
+        my $oldaction = POSIX::SigAction->new();
+        sigaction(SIGALRM ,$action ,$oldaction );
+      }
       alarm($self->{timeout} - 1); # 1 second before the global unknown timeout
       if ($self->{handle} = DBI->connect(
           $self->{dsn},
@@ -1092,14 +1111,17 @@ sub init {
     eval {
       require DBI;
       use POSIX ':signal_h';
-      local $SIG{'ALRM'} = sub {
-        die "alarm\n";
-      };
-      my $mask = POSIX::SigSet->new( SIGALRM );
-      my $action = POSIX::SigAction->new(
-      sub { die "alarm\n" ; }, $mask);
-      my $oldaction = POSIX::SigAction->new();
-      sigaction(SIGALRM ,$action ,$oldaction );
+      if ($^O =~ /MSWin/) {
+        local $SIG{'ALRM'} = sub {
+          die "alarm\n";
+        };
+      } else {
+        my $mask = POSIX::SigSet->new( SIGALRM );
+        my $action = POSIX::SigAction->new(
+            sub { die "alarm\n" ; }, $mask);
+        my $oldaction = POSIX::SigAction->new();
+        sigaction(SIGALRM ,$action ,$oldaction );
+      }
       alarm($self->{timeout} - 1); # 1 second before the global unknown timeout
       if ($self->{handle} = DBI->connect(
           sprintf("DBI:SQLRelay:host=%s;port=%d;socket=%s", $self->{host}, $self->{port}, $self->{socket}),
