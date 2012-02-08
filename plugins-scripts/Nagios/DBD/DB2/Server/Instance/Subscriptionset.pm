@@ -10,7 +10,7 @@ our @ISA = qw(DBD::DB2::Server::Instance);
   my $sample = {
     headers => 'APPLY_QUAL SET_NAME LASTRUN LASTSUCCESS SYNCHTIME ENDTIME SOURCE_CONN_TIME',
     data => [
-      'EI2MISQ1 EAI2MISS1 2007-05-21-08.24.01.484509 2007-05-21-08.23.12.809407 2007-05-21-07.26.07.000000 2007-05-21-08.24.01.610647 2007-05-21-08.24.01.544292',
+      'EI2MISQ1 EAI2MISS1 2007-05-21-08.25.00.000000 2007-05-21-08.24.01.484509 2007-05-21-08.23.12.809407 2007-05-21-07.26.07.000000 2007-05-21-08.24.01.610647 2007-05-21-08.24.01.544292',
     ],
   };
 
@@ -42,7 +42,7 @@ our @ISA = qw(DBD::DB2::Server::Instance);
               endtime,
           FROM asn.ibmsnap_applytrail
       });
-      #@subscriptionsetresult = map { split /\s+/ } @{$sample->{data}};
+      #@subscriptionsetresult = map { [split /\s+/] } @{$sample->{data}};
       foreach (@subscriptionsetresult) {
         my ($apply_qual, $set_name, $now, $lastrun, $lastsuccess, $synchtime, $source_conn_time, $endtime) = @{$_};
         if ($params{regexp}) {
@@ -54,13 +54,13 @@ our @ISA = qw(DBD::DB2::Server::Instance);
         my %thisparams = %params;
         $thisparams{apply_qual} = $apply_qual;
         $thisparams{set_name} = $set_name;
-        $thisparams{now} = DBD::DB2::Server::convert_db2_timestamp($now);
-        $thisparams{lastrun} = DBD::DB2::Server::convert_db2_timestamp($lastrun);
-        $thisparams{lastsuccess} = DBD::DB2::Server::convert_db2_timestamp($lastsuccess);
-        $thisparams{synchtime} = DBD::DB2::Server::convert_db2_timestamp($synchtime);
-        $thisparams{source_conn_time} = DBD::DB2::Server::convert_db2_timestamp($source_conn_time);
-        $thisparams{endtime} = DBD::DB2::Server::convert_db2_timestamp($endtime);
-        my $subscriptionset = DBD::DB2::Server::Subscriptionset->new(
+        $thisparams{now} = DBD::DB2::Server::return_first_server()->convert_db2_timestamp($now);
+        $thisparams{lastrun} = DBD::DB2::Server::return_first_server()->convert_db2_timestamp($lastrun);
+        $thisparams{lastsuccess} = DBD::DB2::Server::return_first_server()->convert_db2_timestamp($lastsuccess);
+        $thisparams{synchtime} = DBD::DB2::Server::return_first_server()->convert_db2_timestamp($synchtime);
+        $thisparams{source_conn_time} = DBD::DB2::Server::return_first_server()->convert_db2_timestamp($source_conn_time);
+        $thisparams{endtime} = DBD::DB2::Server::return_first_server()->convert_db2_timestamp($endtime);
+        my $subscriptionset = DBD::DB2::Server::Instance::Subscriptionset->new(
             %thisparams);
         add_subscriptionset($subscriptionset);
         $num_subscriptionsets++;
@@ -107,7 +107,7 @@ sub nagios {
   my $self = shift;
   my %params = @_;
   if (! $self->{nagios_level}) {
-    if (($params{mode} =~ /server::instance::replication::subscriptionlatency/) {
+    if ($params{mode} =~ /server::instance::replication::subscriptionlatency/) {
      # last successful < last run
      # and last run in the near past
       $self->add_nagios(
