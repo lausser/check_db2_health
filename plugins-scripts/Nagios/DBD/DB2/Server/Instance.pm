@@ -48,8 +48,7 @@ sub init {
     if (! defined $self->{delay}) {
       $self->add_nagios_critical("unable to aquire capture delay info");
     }
-  } elsif (($params{mode} =~ /server::instance::replication::listsubscriptionsets/) ||
-      ($params{mode} =~ /server::instance::replication::subscriptionlatency/)) {
+  } elsif ($params{mode} =~ /server::instance::replication::subscriptionsets/) {
     DBD::DB2::Server::Instance::Subscriptionset::init_subscriptionsets(%params);
     if (my @subscriptionsets =
         DBD::DB2::Server::Instance::Subscriptionset::return_subscriptionsets()) {
@@ -74,11 +73,16 @@ sub nagios {
         $_->nagios(%params);
         $self->merge_nagios($_);
       }
-    } elsif ($params{mode} =~ /server::instance::subscriptionset::listsubscriptionsets/) {
+    } elsif ($params{mode} =~ /server::instance::replication::subscriptionsets::listsubscriptionsets/) {
       foreach (sort { $a->{apply_qual} cmp $b->{apply_qual}; }  @{$self->{subscriptionsets}}) {
         printf "%s %s\n", $_->{apply_qual}, $_->{set_name};
       }
       $self->add_nagios_ok("have fun");
+    } elsif ($params{mode} =~ /server::instance::replication::subscriptionsets/) {
+      foreach (@{$self->{subscriptionsets}}) {
+        $_->nagios(%params);
+        $self->merge_nagios($_);
+      }
     } elsif ($params{mode} =~ /server::instance::replication::capturelatency/) {
       $self->add_nagios(
           $self->check_thresholds($self->{capture_latency}, "10", "60"),
