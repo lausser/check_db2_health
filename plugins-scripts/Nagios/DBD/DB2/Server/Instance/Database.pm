@@ -230,6 +230,33 @@ sub init {
     }
     # time is measured in days
     @{$self->{stale_tables}} = map { $_->[1] = $_->[1] / 86400; $_; } @{$self->{stale_tables}};
+  } elsif ($params{mode} =~ /server::instance::database::invalidobjects/) {
+    @{$self->{invalid_objects}} = $self->{handle}->fetchall_array(q{
+        SELECT
+            'trigger', SUBSTR(trigschema, 1, 20), trigname FROM syscat.triggers
+        WHERE
+            valid IN ('N', 'X')
+        UNION
+        SELECT
+            'package', SUBSTR(pkgschema, 1, 20), pkgname FROM syscat.packages
+        WHERE
+            valid IN ('N', 'X')
+        UNION
+        SELECT
+            'view', SUBSTR(viewschema, 1, 20), substr(viewname, 1, 20) FROM syscat.views
+        WHERE
+            valid IN ('X')
+        UNION
+        SELECT
+            'routine', SUBSTR(routineschema, 1, 20), substr(routinename, 1, 20) FROM syscat.routines
+        WHERE
+            valid IN ('N', 'X')
+        UNION
+        SELECT
+            'table', SUBSTR(tabschema, 1, 20), substr(tabname, 1, 20) FROM syscat.tables
+        WHERE
+            valid IN ('N', 'X')
+    });
   } elsif ($params{mode} =~ /server::instance::database::sortoverflows/) {
     my $sql = undef;
     if ($self->version_is_minimum('9.1')) {

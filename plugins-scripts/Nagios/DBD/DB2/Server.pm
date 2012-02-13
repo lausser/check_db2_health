@@ -812,7 +812,6 @@ sub convert_db2_timestamp {
     # $sec,$min,$hours,$mday,$mon,$year
     # 6    5    4      3     2    1, mon=0..11
     my $epoch = timelocal($6, $5, $4, $3, $2 - 1, $1) + $7 / 1000000;
-    printf STDERR "epoch is %d\n", $epoch;
     return $epoch;
   } else {
   }

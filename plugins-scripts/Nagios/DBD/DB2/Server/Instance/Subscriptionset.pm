@@ -8,7 +8,7 @@ our @ISA = qw(DBD::DB2::Server::Instance);
   my @subscriptionsets = ();
   my $initerrors = undef;
   my $sample = {
-    headers => 'APPLY_QUAL SET_NAME LASTRUN LASTSUCCESS SYNCHTIME ENDTIME SOURCE_CONN_TIME',
+    headers => 'APPLY_QUAL SET_NAME now LASTRUN LASTSUCCESS SYNCHTIME ENDTIME SOURCE_CONN_TIME',
     data => [
       'EI2MISQ1 EAI2MISS1 2007-05-21-08.25.00.000000 2007-05-21-08.24.01.484509 2007-05-21-08.23.12.809407 2007-05-21-07.26.07.000000 2007-05-21-08.24.01.610647 2007-05-21-08.24.01.544292',
     ],
@@ -112,10 +112,10 @@ sub nagios {
      # and last run in the near past
       $self->add_nagios(
           $self->check_thresholds($self->{end_to_end_latency}, 600, 1200),
-          sprintf "%s/%s latency is %.3f%s",
+          sprintf "%s/%s latency is %.3fs",
           $self->{apply_qual}, $self->{set_name}, $self->{end_to_end_latency});
-      $self->add_perfdata(sprintf "end_to_end_latency=%.3f;%s;%s",
-          $self->{end_to_end_latency},
+      $self->add_perfdata(sprintf "%s_%s_end_to_end_latency=%.3f;%s;%s",
+          $self->{apply_qual}, $self->{set_name}, $self->{end_to_end_latency},
           $self->{warningrange}, $self->{criticalrange});
     }
   }
