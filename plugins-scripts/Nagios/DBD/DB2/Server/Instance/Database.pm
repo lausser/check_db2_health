@@ -233,30 +233,42 @@ sub init {
   } elsif ($params{mode} =~ /server::instance::database::invalidobjects/) {
     @{$self->{invalid_objects}} = $self->{handle}->fetchall_array(q{
         SELECT
-            'trigger', SUBSTR(trigschema, 1, 20), trigname FROM syscat.triggers
+            'trigger', trigschema, trigname FROM syscat.triggers
         WHERE
-            valid IN ('N', 'X')
+            valid IN ('N', 'X') -- Y=valid, N=invalid, X=inoperative
+            --OR trigschema = 'TOOLS' and trigname in ( 'ICM_ACEI','ICM_ACED')
         UNION
         SELECT
-            'package', SUBSTR(pkgschema, 1, 20), pkgname FROM syscat.packages
+            'package', pkgschema, pkgname FROM syscat.packages
         WHERE
-            valid IN ('N', 'X')
+            valid IN ('N', 'X') -- Y=valid, N=not valid, X=inoperative
         UNION
         SELECT
-            'view', SUBSTR(viewschema, 1, 20), substr(viewname, 1, 20) FROM syscat.views
+            'view', viewschema, viewname FROM syscat.views
         WHERE
-            valid IN ('X')
+            valid IN ('X') -- Y=valid, X=inoperative
+            --OR viewschema = 'SYSCAT' and viewname in ( 'XSROBJECTDEP','XSROBJECTS')
         UNION
         SELECT
-            'routine', SUBSTR(routineschema, 1, 20), substr(routinename, 1, 20) FROM syscat.routines
+            'routine', routineschema, routinename FROM syscat.routines
         WHERE
-            valid IN ('N', 'X')
+            valid IN ('N', 'X') -- Y=valid, N=invalid, X=inoperative
         UNION
         SELECT
-            'table', SUBSTR(tabschema, 1, 20), substr(tabname, 1, 20) FROM syscat.tables
+            'table', tabschema, tabname FROM syscat.tables
         WHERE
-            valid IN ('N', 'X')
+            status IN ('C', 'X') -- N=normal, C=check pending, X=inoperative
     });
+    @{$self->{duplicate_packages}} = $self->{handle}->fetchall_array(q{
+        SELECT
+            SUBSTR(pkgname, 1, 20), COUNT(*) FROM syscat.packages
+        GROUP BY pkgname HAVING COUNT(*) > 1 ORDER BY 1
+    });
+    @{$self->{invalid_triggers}} = grep { $_->[0] eq 'trigger' } @{$self->{invalid_objects}};
+    @{$self->{invalid_packages}} = grep { $_->[0] eq 'package' } @{$self->{invalid_objects}};
+    @{$self->{invalid_views}} = grep { $_->[0] eq 'view' } @{$self->{invalid_objects}};
+    @{$self->{invalid_routines}} = grep { $_->[0] eq 'routine' } @{$self->{invalid_objects}};
+    @{$self->{invalid_tables}} = grep { $_->[0] eq 'table' } @{$self->{invalid_objects}};
   } elsif ($params{mode} =~ /server::instance::database::sortoverflows/) {
     my $sql = undef;
     if ($self->version_is_minimum('9.1')) {
@@ -379,6 +391,34 @@ sub nagios {
         }
       } else {
         $self->add_nagios_ok('table statistics are up to date');
+      }
+    } elsif ($params{mode} =~ /server::instance::database::invalidobjects/) {
+      # we only use warnings here
+      $self->check_thresholds(0, 7, 99999);
+      my $its_ok = 1;
+      for my $obj (qw(triggers packages views routines tables)) {
+        if (@{$self->{'invalid_'.$obj}}) {
+          $its_ok = 0;
+          $self->add_nagios_warning(sprintf '%d %s are invalid', 
+              scalar(@{$self->{'invalid_'.$obj}}), $obj);
+          foreach (@{$self->{'invalid_'.$obj}}) {
+            $self->add_nagios_warning(sprintf '%s.%s', $_->[1], $_->[2]);
+          }
+        }
+        $self->add_perfdata(sprintf "invalid_%s=%d", $obj, scalar(@{$self->{'invalid_'.$obj}}));
+      }
+      if (@{$self->{duplicate_packages}}) {
+        $its_ok = 0;
+        $self->add_nagios_warning(sprintf '%d duplicate pkgs:',
+            scalar(@{$self->{duplicate_packages}}));
+        foreach (@{$self->{duplicate_packages}}) {
+          $self->add_nagios_warning(sprintf '%s(%dx)',
+              $_->[0], $_->[1]);
+        }
+      }
+      $self->add_perfdata(sprintf "dup_pkgs=%d", scalar(@{$self->{duplicate_packages}}));
+      if ($its_ok) {
+        $self->add_nagios_ok('no invalid objects found');
       }
     } elsif ($params{mode} =~ /server::instance::database::sortoverflows/) {
       printf STDERR "%s\n", Data::Dumper::Dumper($self->{sort_overflows_per_sec});
