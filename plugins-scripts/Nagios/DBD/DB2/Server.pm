@@ -834,6 +834,7 @@ sub new {
     mode => $params{mode},
     timeout => $params{timeout},
     method => $params{method} || "dbi",
+    verbose => $params{verbose},
     hostname => $params{hostname},
     database => $params{database},
     username => $params{username},
