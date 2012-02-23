@@ -20,7 +20,7 @@ our @ISA = qw(DBD::DB2::Server::Instance);
 
   sub return_subscriptionsets {
     return reverse
-        sort { $a->{name} cmp $b->{name} } @subscriptionsets;
+        sort { $a->{apply_qual}.$a->{set_name} cmp $b->{apply_qual}.$b->{set_name} } @subscriptionsets;
   }
 
   sub init_subscriptionsets {
@@ -30,36 +30,54 @@ our @ISA = qw(DBD::DB2::Server::Instance);
     my $num_subscriptionsets = 0;
     if (($params{mode} =~ /server::instance::replication::subscriptionsets::listsubscriptionsets/) ||
         ($params{mode} =~ /server::instance::replication::subscriptionsets::subscriptionlatency/)) {
+      # http://publib.boulder.ibm.com/infocenter/db2luw/v9r7/index.jsp?topic=%2Fcom.ibm.swg.im.iis.db.repl.sqlrepl.doc%2Ftopics%2Fiiyrsrepe2elatency.html
+      my $lookback = $params{lookback} || 30;
       my @subscriptionsetresult = $params{handle}->fetchall_array(q{
-          SELECT
-              apply_qual,
-              set_name,
-              current timestamp,
-              lastrun,
-              lastsuccess,
-              synchtime,
-              source_conn_time,
-              endtime,
+          SELECT  DISTINCT apply_qual, set_name,
+            COALESCE(AVG(
+                ((DAYS(endtime) - DAYS(lastrun)) * 86400 +
+                (MIDNIGHT_SECONDS(endtime) - MIDNIGHT_SECONDS(lastrun)) +
+                (MICROSECOND(endtime) - MICROSECOND(lastrun)) / 1000000.0) +
+                ((DAYS(source_conn_time) - DAYS(synchtime)) * 86400 +
+                (MIDNIGHT_SECONDS(source_conn_time) - MIDNIGHT_SECONDS(synchtime)) +
+                (MICROSECOND(source_conn_time) - MICROSECOND(synchtime)) / 1000000.0)
+            ), 0) AS end_to_end_latency,
+            COALESCE(MIN(
+                ((DAYS(current timestamp) - DAYS(lastrun)) * 86400 +
+                (MIDNIGHT_SECONDS(current timestamp) - MIDNIGHT_SECONDS(lastrun)) +
+                (MICROSECOND(current timestamp) - MICROSECOND(lastrun)) / 1000000.0)
+            ), 0) AS run_lag,
+            COALESCE(MIN(
+                ((DAYS(current timestamp) - DAYS(lastsuccess)) * 86400 +
+                (MIDNIGHT_SECONDS(current timestamp) - MIDNIGHT_SECONDS(lastsuccess)) +
+                (MICROSECOND(current timestamp) - MICROSECOND(lastsuccess)) / 1000000.0)
+            ), 0) AS success_lag,
+            COALESCE(MIN(
+                ((DAYS(current timestamp) - DAYS(synchtime)) * 86400 +
+                (MIDNIGHT_SECONDS(current timestamp) - MIDNIGHT_SECONDS(synchtime)) +
+                (MICROSECOND(current timestamp) - MICROSECOND(synchtime)) / 1000000.0)
+            ), 0) AS latency
           FROM asn.ibmsnap_applytrail
-      });
+          WHERE synchtime > (current timestamp - ? minutes)
+          GROUP BY apply_qual, set_name
+      }, $lookback);
       #@subscriptionsetresult = map { [split /\s+/] } @{$sample->{data}};
       foreach (@subscriptionsetresult) {
-        my ($apply_qual, $set_name, $now, $lastrun, $lastsuccess, $synchtime, $source_conn_time, $endtime) = @{$_};
+        my ($apply_qual, $set_name, $end_to_end_latency, $run_lag, $success_lag, $latency) = @{$_};
         if ($params{regexp}) {
-          next if $params{selectname} && $apply_qual !~ /$params{selectname}/;
+          my $matchname = $apply_qual.'/'.$set_name;
+          next if $params{selectname} && $matchname !~ /$params{selectname}/;
         } else {
-          next if $params{selectname} && lc $params{selectname} ne lc $apply_qual;
+          next if $params{selectname} && lc $params{selectname} ne lc $apply_qual.'/'.$set_name;
         }
-        next if $params{name2} && lc $params{name2} ne lc $set_name;
+        #next if $params{name2} && lc $params{name2} ne lc $set_name;
         my %thisparams = %params;
         $thisparams{apply_qual} = $apply_qual;
         $thisparams{set_name} = $set_name;
-        $thisparams{now} = DBD::DB2::Server::return_first_server()->convert_db2_timestamp($now);
-        $thisparams{lastrun} = DBD::DB2::Server::return_first_server()->convert_db2_timestamp($lastrun);
-        $thisparams{lastsuccess} = DBD::DB2::Server::return_first_server()->convert_db2_timestamp($lastsuccess);
-        $thisparams{synchtime} = DBD::DB2::Server::return_first_server()->convert_db2_timestamp($synchtime);
-        $thisparams{source_conn_time} = DBD::DB2::Server::return_first_server()->convert_db2_timestamp($source_conn_time);
-        $thisparams{endtime} = DBD::DB2::Server::return_first_server()->convert_db2_timestamp($endtime);
+        $thisparams{end_to_end_latency} = $end_to_end_latency;
+        $thisparams{run_lag} = $run_lag;
+        $thisparams{success_lag} = $success_lag;
+        $thisparams{latency} = $latency;
         my $subscriptionset = DBD::DB2::Server::Instance::Subscriptionset->new(
             %thisparams);
         add_subscriptionset($subscriptionset);
@@ -82,7 +100,7 @@ sub new {
     warningrange => $params{warningrange},
     criticalrange => $params{criticalrange},
   };
-  foreach my $k (qw(apply_qual set_name now lastrun lastsuccess synchtime source_conn_time endtime)) {
+  foreach my $k (qw(apply_qual set_name end_to_end_latency run_lag success_lag latency)) {
     $self->{$k} = $params{$k};
   }
   bless $self, $class;
@@ -96,10 +114,6 @@ sub init {
   $self->init_nagios();
   $self->set_local_db_thresholds(%params);
   if (($params{mode} =~ /server::instance::replication::subscriptionsets::subscriptionlatency/)) {
-    $self->{run_lag} = $self->{now} - $self->{lastrun};
-    $self->{success_lag} = $self->{now} - $self->{lastsuccess};
-    $self->{latency} = $self->{now} - $self->{synchtime};
-    $self->{end_to_end_latency} = ($self->{endtime} - $self->{lastrun}) + ($self->{source_conn_time} - $self->{synchtime});
   }
 }
 
@@ -114,9 +128,15 @@ sub nagios {
           $self->check_thresholds($self->{end_to_end_latency}, 600, 1200),
           sprintf "%s/%s latency is %.3fs",
           $self->{apply_qual}, $self->{set_name}, $self->{end_to_end_latency});
-      $self->add_perfdata(sprintf "%s_%s_end_to_end_latency=%.3f;%s;%s",
+      $self->add_perfdata(sprintf "%s_%s_end_to_end_latency=%.3fs;%s;%s",
           $self->{apply_qual}, $self->{set_name}, $self->{end_to_end_latency},
           $self->{warningrange}, $self->{criticalrange});
+      $self->add_perfdata(sprintf "%s_%s_run_lag=%.3fs",
+          $self->{apply_qual}, $self->{set_name}, $self->{run_lag});
+      $self->add_perfdata(sprintf "%s_%s_success_lag=%.3fs",
+          $self->{apply_qual}, $self->{set_name}, $self->{success_lag});
+      $self->add_perfdata(sprintf "%s_%s_latency=%.3fs",
+          $self->{apply_qual}, $self->{set_name}, $self->{latency});
     }
   }
 }

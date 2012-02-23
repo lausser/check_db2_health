@@ -40,12 +40,16 @@ sub init {
     my $lookback = $params{lookback} || 30;
     $self->{capture_latency} = $params{handle}->fetchrow_array(q{
         SELECT
-            COALESCE(AVG(TIMESTAMPDIFF(1, CHAR((monitor_time - synctime)))), 0)
+            COALESCE(AVG(
+                (DAYS(monitor_time) - DAYS(synchtime)) * 86400 + 
+                (MIDNIGHT_SECONDS(monitor_time) - MIDNIGHT_SECONDS(synchtime)) +
+                (MICROSECOND(monitor_time) - MICROSECOND(synchtime)) / 1000000.0
+            ), 0)
         FROM
             asn.ibmsnap_capmon 
         WHERE 
             monitor_time > (current timestamp - ? minutes)}, $lookback);
-    if (! defined $self->{delay}) {
+    if (! defined $self->{capture_latency}) {
       $self->add_nagios_critical("unable to aquire capture delay info");
     }
   } elsif ($params{mode} =~ /server::instance::replication::subscriptionsets/) {
@@ -74,7 +78,9 @@ sub nagios {
         $self->merge_nagios($_);
       }
     } elsif ($params{mode} =~ /server::instance::replication::subscriptionsets::listsubscriptionsets/) {
-      foreach (sort { $a->{apply_qual} cmp $b->{apply_qual}; }  @{$self->{subscriptionsets}}) {
+      my %seen;
+      my @unique_subscriptionsets = grep { not $seen{$_->{apply_qual}.$_->{set_name}}++ } @{$self->{subscriptionsets}};
+      foreach (sort { $a->{apply_qual} cmp $b->{apply_qual}; } @unique_subscriptionsets) {
         printf "%s %s\n", $_->{apply_qual}, $_->{set_name};
       }
       $self->add_nagios_ok("have fun");
@@ -87,7 +93,7 @@ sub nagios {
       $self->add_nagios(
           $self->check_thresholds($self->{capture_latency}, "10", "60"),
               sprintf "capture latency at %.2fs", $self->{capture_latency});
-      $self->add_perfdata(sprintf "capture_latency=%.2f%;%s;%s",
+      $self->add_perfdata(sprintf "capture_latency=%.2fs;%s;%s",
           $self->{capture_latency},
           $self->{warningrange}, $self->{criticalrange});
 

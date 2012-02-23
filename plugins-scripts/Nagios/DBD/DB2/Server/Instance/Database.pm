@@ -259,16 +259,18 @@ sub init {
         WHERE
             status IN ('C', 'X') -- N=normal, C=check pending, X=inoperative
     });
-    @{$self->{duplicate_packages}} = $self->{handle}->fetchall_array(q{
-        SELECT
-            SUBSTR(pkgname, 1, 20), COUNT(*) FROM syscat.packages
-        GROUP BY pkgname HAVING COUNT(*) > 1 ORDER BY 1
-    });
     @{$self->{invalid_triggers}} = grep { $_->[0] eq 'trigger' } @{$self->{invalid_objects}};
     @{$self->{invalid_packages}} = grep { $_->[0] eq 'package' } @{$self->{invalid_objects}};
     @{$self->{invalid_views}} = grep { $_->[0] eq 'view' } @{$self->{invalid_objects}};
     @{$self->{invalid_routines}} = grep { $_->[0] eq 'routine' } @{$self->{invalid_objects}};
     @{$self->{invalid_tables}} = grep { $_->[0] eq 'table' } @{$self->{invalid_objects}};
+  } elsif ($params{mode} =~ /server::instance::database::duppackages/) {
+    @{$self->{duplicate_packages}} = $self->{handle}->fetchall_array(q{
+        SELECT
+            SUBSTR(pkgname, 1, 20), COUNT(*) FROM syscat.packages
+        GROUP BY pkgname HAVING COUNT(*) > 1 ORDER BY 1
+    });
+    # we can make exceptions here with --name2 --regexp
   } elsif ($params{mode} =~ /server::instance::database::sortoverflows/) {
     my $sql = undef;
     if ($self->version_is_minimum('9.1')) {
@@ -407,19 +409,21 @@ sub nagios {
         }
         $self->add_perfdata(sprintf "invalid_%s=%d", $obj, scalar(@{$self->{'invalid_'.$obj}}));
       }
+      if ($its_ok) {
+        $self->add_nagios_ok('no invalid objects found');
+      }
+    } elsif ($params{mode} =~ /server::instance::database::duppackages/) {
       if (@{$self->{duplicate_packages}}) {
-        $its_ok = 0;
         $self->add_nagios_warning(sprintf '%d duplicate pkgs:',
             scalar(@{$self->{duplicate_packages}}));
         foreach (@{$self->{duplicate_packages}}) {
           $self->add_nagios_warning(sprintf '%s(%dx)',
               $_->[0], $_->[1]);
         }
+      } else {
+        $self->add_nagios_ok('all package names are unique');
       }
       $self->add_perfdata(sprintf "dup_pkgs=%d", scalar(@{$self->{duplicate_packages}}));
-      if ($its_ok) {
-        $self->add_nagios_ok('no invalid objects found');
-      }
     } elsif ($params{mode} =~ /server::instance::database::sortoverflows/) {
       printf STDERR "%s\n", Data::Dumper::Dumper($self->{sort_overflows_per_sec});
       $self->add_nagios(
