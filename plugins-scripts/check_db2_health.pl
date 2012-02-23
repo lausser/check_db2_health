@@ -151,6 +151,8 @@ EOUS
     --regexp
        if this parameter is used, name will be interpreted as a 
        regular expression.
+    --maxgap
+       used for the maximum amount of time a certain event has not happened.
     --units
        one of %, KB, MB, GB. This is used for a better output of mode=sql
        and for specifying thresholds for mode=tablespace-free
@@ -239,6 +241,7 @@ my @params = (
     "absolute|a",
     "basis",
     "lookback|l=i",
+    "maxgap=f",
     "environment|e=s%",
     "method=s",
     "runas|r=s",
@@ -488,6 +491,7 @@ my %params = (
     dbthresholds => $commandline{dbthresholds},
     absolute => $commandline{absolute},
     lookback => $commandline{lookback},
+    maxgap => $commandline{maxgap},
     tablespace => $commandline{tablespace},
     datafile => $commandline{datafile},
     basis => $commandline{basis},

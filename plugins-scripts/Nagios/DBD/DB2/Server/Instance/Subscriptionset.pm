@@ -122,8 +122,19 @@ sub nagios {
   my %params = @_;
   if (! $self->{nagios_level}) {
     if ($params{mode} =~ /server::instance::replication::subscriptionsets::subscriptionlatency/) {
-     # last successful < last run
-     # and last run in the near past
+      # success_lag wird zu gross
+      # run_lag wird zu gross
+      # end_to_end_latency wird zu gross
+      my $maxgap = $params{maxgap} || ($params{lookback} ? $params{lookback} * 4 : 60);
+      if ($self->{run_lag} > 60 * $maxgap) {
+          $self->add_nagios_critical(
+              sprintf "%s/%s did not run for %.2f minutes",
+              $self->{apply_qual}, $self->{set_name}, $maxgap);
+      } elsif ($self->{success_lag} > 60 * $maxgap) {
+          $self->add_nagios_critical(
+              sprintf "%s/%s did not run successful for %.2f minutes",
+              $self->{apply_qual}, $self->{set_name}, $maxgap);
+      }
       $self->add_nagios(
           $self->check_thresholds($self->{end_to_end_latency}, 600, 1200),
           sprintf "%s/%s latency is %.3fs",
