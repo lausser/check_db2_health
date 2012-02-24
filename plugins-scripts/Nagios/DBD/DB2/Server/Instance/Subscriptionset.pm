@@ -137,7 +137,7 @@ sub nagios {
       }
       $self->add_nagios(
           $self->check_thresholds($self->{end_to_end_latency}, 600, 1200),
-          sprintf "%s/%s latency is %.3fs",
+          sprintf "%s/%s e2e_latency is %.3fs",
           $self->{apply_qual}, $self->{set_name}, $self->{end_to_end_latency});
       $self->add_perfdata(sprintf "%s_%s_end_to_end_latency=%.3fs;%s;%s",
           $self->{apply_qual}, $self->{set_name}, $self->{end_to_end_latency},
