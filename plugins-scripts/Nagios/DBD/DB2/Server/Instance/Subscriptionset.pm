@@ -125,15 +125,15 @@ sub nagios {
       # success_lag wird zu gross
       # run_lag wird zu gross
       # end_to_end_latency wird zu gross
-      my $maxgap = $params{maxgap} || ($params{lookback} ? $params{lookback} * 4 : 60);
-      if ($self->{run_lag} > 60 * $maxgap) {
+      my $maxinactivity = $params{maxinactivity} || ($params{lookback} ? $params{lookback} * 4 : 60);
+      if ($self->{run_lag} > 60 * $maxinactivity) {
           $self->add_nagios_critical(
               sprintf "%s/%s did not run for %.2f minutes",
-              $self->{apply_qual}, $self->{set_name}, $maxgap);
-      } elsif ($self->{success_lag} > 60 * $maxgap) {
+              $self->{apply_qual}, $self->{set_name}, $maxinactivity);
+      } elsif ($self->{success_lag} > 60 * $maxinactivity) {
           $self->add_nagios_critical(
               sprintf "%s/%s did not run successful for %.2f minutes",
-              $self->{apply_qual}, $self->{set_name}, $maxgap);
+              $self->{apply_qual}, $self->{set_name}, $maxinactivity);
       }
       $self->add_nagios(
           $self->check_thresholds($self->{end_to_end_latency}, 600, 1200),

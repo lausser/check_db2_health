@@ -38,6 +38,17 @@ sub init {
     }
   } elsif (($params{mode} =~ /server::instance::replication::capturelatency/)) {
     my $lookback = $params{lookback} || 30;
+    $self->{capture_last_event} = $params{handle}->fetchrow_array(q{
+        SELECT
+            COALESCE((
+                (DAYS(current timestamp) - DAYS(monitor_time)) * 86400 + 
+                (MIDNIGHT_SECONDS(current timestamp) - MIDNIGHT_SECONDS(monitor_time))
+            ), 0)
+        FROM
+            asn.ibmsnap_capmon 
+        WHERE 
+            monitor_time = (select MAX(monitor_time) from asn.ibmsnap_capmon)
+    });
     $self->{capture_latency} = $params{handle}->fetchrow_array(q{
         SELECT
             COALESCE(AVG(
@@ -49,7 +60,7 @@ sub init {
             asn.ibmsnap_capmon 
         WHERE 
             monitor_time > (current timestamp - ? minutes)}, $lookback);
-    if (! defined $self->{capture_latency}) {
+    if (! defined $self->{capture_latency} && ! defined $self->{capture_last_event}) {
       $self->add_nagios_critical("unable to aquire capture delay info");
     }
   } elsif ($params{mode} =~ /server::instance::replication::subscriptionsets/) {
@@ -90,6 +101,13 @@ sub nagios {
         $self->merge_nagios($_);
       }
     } elsif ($params{mode} =~ /server::instance::replication::capturelatency/) {
+    my $maxinactivity = $params{maxinactivity} || ($params{lookback} ? $params{lookback} * 2 : 60);
+      if ($self->{capture_last_event} > $maxinactivity * 60) {
+          $self->add_nagios_critical(
+              sprintf "no capture activity since %.2f minutes",
+              $self->{capture_last_event} / 60
+          );
+      }
       $self->add_nagios(
           $self->check_thresholds($self->{capture_latency}, "10", "60"),
               sprintf "capture latency at %.2fs", $self->{capture_latency});
