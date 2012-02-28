@@ -270,7 +270,13 @@ sub init {
             SUBSTR(pkgname, 1, 20), COUNT(*) FROM syscat.packages
         GROUP BY pkgname HAVING COUNT(*) > 1 ORDER BY 1
     });
-    # we can make exceptions here with --name2 --regexp
+    if ($params{selectname} && $params{regexp}) {
+      @{$self->{duplicate_packages}} = grep { $_->[0] =~ $params{selectname} }
+          @{$self->{duplicate_packages}};
+    } elsif ($params{selectname}) {
+      @{$self->{duplicate_packages}} = grep { $_->[0] eq $params{selectname} }
+          @{$self->{duplicate_packages}};
+    }
   } elsif ($params{mode} =~ /server::instance::database::sortoverflows/) {
     my $sql = undef;
     if ($self->version_is_minimum('9.1')) {

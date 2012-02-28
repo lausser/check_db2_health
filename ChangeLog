@@ -2,6 +2,9 @@
 # Changelog of the check_db2_health plugin #
 ###############################################
 
+1.0.5.1 - 2012-02-28
+- exceptions in mode duplicate-packages are possible (--name='^(?!(DUPPATTERN$)|(DUPPATTERN2$))' --regexp)
+
 1.0.5 - 2012-02-23
 - add capture-latency, subscription-set-latency
 - add invalid-objects
