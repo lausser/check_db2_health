@@ -2,6 +2,9 @@
 # Changelog of the check_db2_health plugin #
 ###############################################
 
+1.0.5.2 - 2012-05-16
+- connected-users no longer counts internal db2 processes (appl_name like db2fw%)
+
 1.0.5.1 - 2012-02-28
 - exceptions in mode duplicate-packages are possible (--name='^(?!(DUPPATTERN$)|(DUPPATTERN2$))' --regexp)
 

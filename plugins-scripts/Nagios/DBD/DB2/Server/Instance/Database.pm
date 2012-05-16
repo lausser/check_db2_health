@@ -194,7 +194,7 @@ sub init {
     # there are a lot more stati than "connected". Applications can
     # be connected although being in another state.
     $self->{connected_users} = $self->{handle}->fetchrow_array(q{
-        SELECT COUNT(*) FROM sysibmadm.applications
+        SELECT COUNT(*) FROM sysibmadm.applications WHERE appl_name NOT LIKE 'db2fw%'
     });
   } elsif ($params{mode} =~ /server::instance::database::lastbackup/) {
     my $sql = undef;
