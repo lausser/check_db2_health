@@ -55,26 +55,49 @@ my %ERRORCODES=( 0 => 'OK', 1 => 'WARNING', 2 => 'CRITICAL', 3 => 'UNKNOWN' );
             tbsp_name, tbsp_type, tbsp_state, tbsp_usable_size_kb,
             tbsp_total_size_kb, tbsp_used_size_kb, tbsp_free_size_kb
         FROM
-            sysibmadm.tbsp_utilization 
+            sysibmadm.tbsp_utilization
         WHERE
             tbsp_type = 'DMS'
         UNION ALL
         SELECT
             tu.tbsp_name, tu.tbsp_type, tu.tbsp_state, tu.tbsp_usable_size_kb,
-            tu.tbsp_total_size_kb, tu.tbsp_used_size_kb, 
+            tu.tbsp_total_size_kb, tu.tbsp_used_size_kb,
             (cu.fs_total_size_kb - cu.fs_used_size_kb) AS tbsp_free_size_kb
         FROM
             sysibmadm.tbsp_utilization tu
         INNER JOIN (
-            SELECT 
-                tbsp_id,
-                SUM(fs_total_size_kb) AS fs_total_size_kb,
-                SUM(fs_used_size_kb) AS fs_used_size_kb 
-           FROM
-               sysibmadm.container_utilization
-           GROUP BY
-               tbsp_id
-        ) cu 
+            SELECT
+               tbsp_id,
+               1 AS fs_total_size_kb,
+               0 AS fs_used_size_kb
+            FROM
+                sysibmadm.container_utilization
+            WHERE
+                (fs_total_size_kb IS NULL OR fs_used_size_kb IS NULL)
+            GROUP BY
+                tbsp_id
+        ) cu
+        ON
+            (tu.tbsp_type = 'SMS' AND tu.tbsp_id = cu.tbsp_id)
+        UNION ALL
+        SELECT
+            tu.tbsp_name, tu.tbsp_type, tu.tbsp_state, tu.tbsp_usable_size_kb,
+            tu.tbsp_total_size_kb, tu.tbsp_used_size_kb,
+            (cu.fs_total_size_kb - cu.fs_used_size_kb) AS tbsp_free_size_kb
+        FROM
+            sysibmadm.tbsp_utilization tu
+        INNER JOIN (
+            SELECT
+               tbsp_id,
+               SUM(fs_total_size_kb) AS fs_total_size_kb,
+               SUM(fs_used_size_kb) AS fs_used_size_kb
+            FROM
+                sysibmadm.container_utilization
+            WHERE
+                (fs_total_size_kb IS NOT NULL AND fs_used_size_kb IS NOT NULL)
+            GROUP BY
+                tbsp_id
+        ) cu
         ON
             (tu.tbsp_type = 'SMS' AND tu.tbsp_id = cu.tbsp_id)
       });

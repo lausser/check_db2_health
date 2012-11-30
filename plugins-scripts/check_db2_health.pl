@@ -354,8 +354,8 @@ if (exists $commandline{runas}) {
   $needs_restart = 1;
   # if the calling script has a path for shared libs and there is no --environment
   # parameter then the called script surely needs the variable too.
-  foreach my $important_env qw(LD_LIBRARY_PATH SHLIB_PATH 
-      DB2_HOME) {
+  foreach my $important_env (qw(LD_LIBRARY_PATH SHLIB_PATH 
+      DB2_HOME)) {
     if ($ENV{$important_env} && ! scalar(grep { /^$important_env=/ } 
         keys %{$commandline{environment}})) {
       $commandline{environment}->{$important_env} = $ENV{$important_env};
