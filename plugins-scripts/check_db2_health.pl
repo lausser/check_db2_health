@@ -29,6 +29,9 @@ my @modes = (
   ['server::sql',
       'sql', undef,
       'any sql command returning a single number' ],
+  ['server::sqlruntime',
+      'sql-runtime', undef,
+      'the time an sql command needs to run' ],
   ['server::instance::database::usage',
       'database-usage', undef,
       'Used space at the database level' ],
@@ -160,6 +163,10 @@ EOUS
   Tablespace-related modes check all tablespaces in one run by default.
   If only a single tablespace should be checked, use the --name parameter.
   The same applies to databuffercache-related modes.
+  If an additional --regexp is added, --name's argument will be interpreted
+  as a regular expression.
+  The parameter --mitigation lets you classify the severity of an offline
+  tablespace. 
 
   In mode sql you can url-encode the statement so you will not have to mess
   around with special characters in your Nagios service definitions.
@@ -231,6 +238,9 @@ my @params = (
     "tablespace=s",
     "datafile=s",
     "waitevent=s",
+    "offlineok",
+    "mitigation=s",
+    "notemp",
     "name=s",
     "name2=s",
     "regexp",
@@ -495,6 +505,9 @@ my %params = (
     tablespace => $commandline{tablespace},
     datafile => $commandline{datafile},
     basis => $commandline{basis},
+    offlineok => $commandline{offlineok},
+    mitigation => $commandline{mitigation},
+    notemp => $commandline{notemp},
     selectname => $commandline{name} || $commandline{tablespace} || $commandline{datafile},
     regexp => $commandline{regexp},
     name => $commandline{name},

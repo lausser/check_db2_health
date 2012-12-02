@@ -25,10 +25,15 @@ my %ERRORCODES=( 0 => 'OK', 1 => 'WARNING', 2 => 'CRITICAL', 3 => 'UNKNOWN' );
     my $num_tablespaces = 0;
     if ($params{mode} =~ /server::instance::database::listtablespaces/) {
       my @tablespaceresult = $params{handle}->fetchall_array(q{
-        SELECT tbspace, tbspacetype FROM syscat.tablespaces
+        SELECT tbspace, tbspacetype, datatype FROM syscat.tablespaces
       });
       foreach (@tablespaceresult) {
-        my ($name, $type) = @{$_};
+        my ($name, $type, $data) = @{$_};
+        # A = All types of permanent data; regular table space 
+        # L = All types of permanent data; large table space 
+        # T = System temporary tables only 
+        # U = Declared temporary tables only
+        next if $params{notemp} && ($data eq "T" || $data eq "U");
         if ($params{regexp}) {
           next if $params{selectname} && $name !~ /$params{selectname}/;
         } else {
