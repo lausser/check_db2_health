@@ -2,10 +2,12 @@
 # Changelog of the check_db2_health plugin #
 ###############################################
 
-1.0.5.3 - 2012-11-29
-- fixed a bug in tablespace-usage/free (null-values in fs_total_size_kb/fs_used_size_kb of sms tbsp_type mean: unused)
+1.0.6 - 2012-11-29
 - implemented all sorts of thresholds
 - add mode sql-runtime
+
+1.0.5.3 - 2012-11-29
+- fixed a bug in tablespace-usage/free (null-values in fs_total_size_kb/fs_used_size_kb of sms tbsp_type mean: unused)
 
 1.0.5.2 - 2012-05-16
 - connected-users no longer counts internal db2 processes (appl_name like db2fw%)
