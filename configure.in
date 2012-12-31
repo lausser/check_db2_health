@@ -88,6 +88,7 @@ AC_OUTPUT(
   plugins-scripts/Makefile 
   plugins-scripts/subst 
   t/Makefile
+  doc/Makefile
 )
 
 ACX_FEATURE([with],[perl])
