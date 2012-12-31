@@ -1,0 +1,260 @@
+:showcomments:
+
+Beschreibung
+------------
+
+
+check_db2_health ist ein Plugin, mit dem unterschiedliche Parameter eines IBM DB2-Servers überprüft werden können.
+
+Dokumentation
+-------------
+
+
+Kommandozeilenparameter
+~~~~~~~~~~~~~~~~~~~~~~~
+
+
+* *--database <DB-Name>* Der Name der Datenbank. (Falls diese lokal katalogisiert ist, reicht dieser Parameter. Ansonsten muss man database, hostname und port angeben)
+* *--hostname <hostname>* Der Datenbankserver
+* *--port <port>* Der Port, auf dem der Server lauscht
+* *--username <username>* Der Datenbankuser
+* *--password <password>* Dessen Passwort
+* *--mode <modus>* Mit dem mode-Parameter teilt man dem Plugin mit, was es tun soll. Siehe Liste der möglichen Werte weiter unten.
+* *--name <objektname>* Hier kann die Prüfung auf ein einziges Objekt begrenzt werden. (Momentan wird dieser Parameter nur für mode=sql verwendet)
+* *--name2 <string>* Verwendet man --mode=sql, dann erscheint das SQL-Statement in der Ausgabe und den Performancedaten. Mit dem Parameter name2 kann man dafür einen eigenen String vergeben.
+* *--warning <range>* Ermittelte Werte außerhalb dieses Bereichs lösen ein WARNING aus.
+* *--critical <range>* Ermittelte Werte außerhalb dieses Bereichs lösen ein CRITICAL aus.
+* *--environment <variable>=<wert>* Damit kann man dem Script Environmentvariablen mitgeben. Mehrfachnennungen sind möglich.
+* *--method <connectmethode>* Mit diesem Parameter teilt man dem Plugin mit, wie es sich zur Datenbank verbinden soll. (dbi für Verbindung per DBD::DB2 (default), derzeit keine Alternativen).
+* *--units <%|KB|MB|GB>* Die Angabe von Einheiten dient der "Verschönerung" von Ausgaben des mode=sql
+
+
+
+Um dem Plugin mitzuteilen, welche Werte es ermitteln und prüfen soll, benutzt man die Option --mode mit verschiedenen Schlüsselwörtern.
+
+Modi
+~~~~
+
+[role="nagiosplugins"]
+|====
+|*Schlüsselwort* |*Bedeutung* |*Wertebereich* 
+|connection-time|Misst, wie lange Verbindungsaufbau und Login dauern|0..n Sekunden (1, 5)
+|connected-users|Anzahl der verbundenen Benutzer|0..n (50, 100)
+|synchronous-read-percentage|Anteil der synchronous reads (SRP)|0%..100% (90:, 80:)
+|asynchronous-write-percentage|Anteil der asynchronous writes (AWP)|0%..100% (90:, 80:)
+|bufferpool-hitratio|Hitratio in Buffer Pools (kann mit --name auf bestimmte Pools eingegrenzt werden)|0%..100% (98:, 90:)
+|bufferpool-data-hitratio|dto., berücksichtigt aber nur Data Pages|0%..100% (98:, 90:)
+|bufferpool-index-hitratio|dto., berücksichtigt aber nur Index Pages|0%..100% (98:, 90:)
+|index-usage|Anteil der SELECTs, die einen Index benutzen|0%..100% (98:, 90:)
+|sort-overflows|Anzahl der Sort-Overflows pro Sekunde|0..n (0.01, 0.1)
+|sort-overflow-percentage|Anteil der Sorts, die in einem Overflow resultieren|0%..100% (5%, 10%)
+|deadlocks|Anzahl der Deadlocks pro Sekunde|0..n (0, 1)
+|lock-waits|Anzahl der Lock-Anforderungen pro Sekunde, die nicht befriedigt werden konnten|0..n (10, 100)
+|lock-waiting|Zeit, die auf Locks gewartet werden muss|0%..100% (2%, 5%)
+|database-usage|Belegter Speicherplatz in einer Datenbank|0%..100% (80%, 90%)
+|tablespace-usage|Belegter Speicherplatz in einem Tablespace|0%..100% (90%, 98%)
+|tablespace-free|Freier Speicherplatz in einem Tablespace. Im Gegensatz zum vorhergehenden Modus kann man hier Schwellwerte mit Hilfe der Option --units in MB und GB angeben.|0%..100% (5:, 2:)
+|log-utilization|Belegter Speicherplatz in einem Datenbank-Log|0%..100% (80, 90)
+|last-backup|Anzahl der Tage seit dem letzten Backup|0..n (1,2)
+|stale-table-runstats|Tabellen, deren Statistiken seit n Tagen nicht aktualisiert wurden|0..n (7, -)
+|sql|Ergebnis eines beliebigen SQL-Befehls, der eine Zahl zurückliefert. Der Befehl selbst wird mit dem Parameter --name übergeben. Ein Label für Performncedaten kann mit dem Parameter --name2 übergeben werden. Mit dem Parameter --units kann die Ausgabe um Einheiten ergänzt werden (%, c, s, MB, GB,.. Wenn der SQL-Befehl Sonder- und Leerzeichen enthält, kann er mit dem mode encode zuerst encodiert werden.|0..n
+|list-databases|Gibt eine Liste aller Datenbanken aus|&#160;
+|list-tablespaces|Gibt eine Liste aller Tablespaces aus|&#160;
+|list-bufferpools|Gibt eine Liste aller Bufferpools aus|&#160;
+|====
+
+
+Es ist zu beachten, daß Schwellwerte entsprechend den Nagios Developer Guidelines anzugeben sind.
+
+"10" bedeutet demzufolge "Alarm, wenn > 10" und
+
+"90:" bedeutet "Alarm, wenn < 90"
+
+Vorbereitung der Datenbank
+--------------------------
+
+
+Damit sich das Plugin die benötigten Informationen aus der Datenbank holen kann, legt man einen (Betriebssystem-)Benutzer nagios (mit gleichnamiger Gruppe) an. Eventuell gibt es diesen bereits, weil der Datenbankserver mit check_nrpe oder check_by_ssh überwacht wird.
+
+Danach schaltet man die Monitoring Switches ein:
+
+[source,txt]
+----
+update dbm cfg using dft_mon_bufpool on
+update dbm cfg using dft_mon_lock on
+update dbm cfg using dft_mon_timestamp on
+----
+
+
+Der nagios-Benutzer (bzw. die nagios-Gruppe) bekommt noch die nötigen Privilegien und nach einem Neustart der Datenbank kanns dann losgehen.
+
+[source,txt]
+----
+db2inst1$ db2 update dbm cfg using sysmon_group nagios
+db2inst1$ db2 grant select,update on table SYSTOOLS.STMG_DBSIZE_INFO to nagios
+db2inst1$ db2stop; db2start
+----
+
+
+Beispiele
+---------
+
+
+[source,txt]
+----
+nagsrv$ check_db2_health --mode connection-time
+WARNING - 1.61 seconds to connect as DB2INST1 | connection_time=1.6084;1;5
+
+nagsrv$ check_db2_health --mode connected-users
+OK - 3 connected users | connected_users=3;50;100
+
+nagsrv$ check_db2_health --mode list-databases
+TOOLSDB
+OK - have fun
+
+nagsrv$ check_db2_health --mode database-usage
+OK - database usage is 31.29% | 'db_toolsdb_usage'=31.29%;80;90
+
+nagsrv$ check_db2_health --mode tablespace-usage
+CRITICAL - tbs TEMPSPACE1 usage is 100.00%, tbs TBSP32KTMP0000 usage is 100.00%, tbs TBSP32K0000 usage is 100.00%, tbs USERSPACE1 usage is 5.08%, tbs SYSTOOLSPACE usage is 1.86%, tbs SYSCATSPACE usage is 80.37% | 'tbs_userspace1_usage_pct'=5.08%;90;98 'tbs_userspace1_usage'=16MB;288;313;0;320 'tbs_tempspace1_usage_pct'=100.00%;90;98 'tbs_tempspace1_usage'=0MB;0;0;0;0 'tbs_tbsp32ktmp0000_usage_pct'=100.00%;90;98 'tbs_tbsp32ktmp0000_usage'=0MB;0;0;0;0 'tbs_tbsp32k0000_usage_pct'=100.00%;90;98 'tbs_tbsp32k0000_usage'=61MB;55;60;0;61 'tbs_systoolspace_usage_pct'=1.86%;90;98 'tbs_systoolspace_usage'=0MB;28;31;0;32 'tbs_syscatspace_usage_pct'=80.37%;90;98 'tbs_syscatspace_usage'=51MB;57;62;0;64
+
+nagsrv$ check_db2_health --mode list-tablespaces
+SYSCATSPACE
+SYSTOOLSPACE
+TBSP32K0000
+TBSP32KTMP0000
+TEMPSPACE1
+USERSPACE1
+OK - have fun
+
+nagsrv$ check_db2_health --mode tablespace-usage --name SYSCATSPACE
+OK - tbs SYSCATSPACE usage is 80.37% | 'tbs_syscatspace_usage_pct'=80.37%;90;98 'tbs_syscatspace_usage'=51MB;57;62;0;64
+
+nagsrv$ check_db2_health --mode tablespace-free --name SYSCATSPACE
+OK - tbs SYSCATSPACE has 19.63% free space left | 'tbs_syscatspace_free_pct'=19.63%;5:;2: 'tbs_syscatspace_free'=12MB;3.20:;1.28:;0;64.00
+
+nagsrv$ check_db2_health --mode tablespace-free --name SYSCATSPACE --units MB
+OK - tbs SYSCATSPACE has 12.55MB free space left | 'tbs_syscatspace_free_pct'=19.63%;7.81:;3.12: 'tbs_syscatspace_free'=12.55MB;5.00:;2.00:;0;64.00
+
+nagsrv$ check_db2_health --mode tablespace-free --name SYSCATSPACE --units MB --warning 15: --critical 10:
+WARNING - tbs SYSCATSPACE has 12.55MB free space left | 'tbs_syscatspace_free_pct'=19.63%;23.44:;15.62: 'tbs_syscatspace_free'=12.55MB;15.00:;10.00:;0;64.00
+
+nagsrv$ check_db2_health --mode bufferpool-hitratio
+CRITICAL - bufferpool IBMDEFAULTBP hitratio is 53.60%, bufferpool BP32K0000 hitratio is 100.00% | 'bp_ibmdefaultbp_hitratio'=53.60%;98:;90: 'bp_ibmdefaultbp_hitratio_now'=100.00% 'bp_bp32k0000_hitratio'=100.00%;98:;90: 'bp_bp32k0000_hitratio_now'=100.00%
+
+nagsrv$ check_db2_health --mode list-bufferpools
+BP32K0000
+IBMDEFAULTBP
+OK - have fun
+
+nagsrv$ check_db2_health --mode bufferpool-hitratio --name IBMDEFAULTBP
+CRITICAL - bufferpool IBMDEFAULTBP hitratio is 53.60% | 'bp_ibmdefaultbp_hitratio'=53.60%;98:;90: 'bp_ibmdefaultbp_hitratio_now'=100.00%
+
+nagsrv$ check_db2_health --mode bufferpool-data-hitratio --name IBMDEFAULTBP
+CRITICAL - bufferpool IBMDEFAULTBP data page hitratio is 64.35% | 'bp_ibmdefaultbp_hitratio'=64.35%;98:;90: 'bp_ibmdefaultbp_hitratio_now'=100.00%
+
+nagsrv$ check_db2_health --mode bufferpool-index-hitratio --name IBMDEFAULTBP
+CRITICAL - bufferpool IBMDEFAULTBP index hitratio is 38.89% | 'bp_ibmdefaultbp_hitratio'=38.89%;98:;90: 'bp_ibmdefaultbp_hitratio_now'=100.00%
+
+nagsrv$ check_db2_health --mode index-usage
+CRITICAL - index usage is 0.71% | index_usage=0.71%;98:;90:
+
+nagsrv$ check_db2_health --mode synchronous-read-percentage
+OK - synchronous read percentage is 100.00% | srp=100.00%;90:;80:
+
+nagsrv$ check_db2_health --mode asynchronous-write-percentage
+CRITICAL - asynchronous write percentage is 0.00% | awp=0.00%;90:;80:
+
+nagsrv$ check_db2_health --mode deadlocks
+OK - 0.000000 deadlocs / sec | deadlocks_per_sec=0.000000;0;1
+
+nagsrv$ check_db2_health --mode lock-waits
+OK - 0.000000 lock waits / sec | lock_waits_per_sec=0.000000;10;100
+
+nagsrv$ check_db2_health --mode lock-waiting
+OK - 0.000000% of the time was spent waiting for locks | lock_percent_waiting=0.000000%;2;5
+----
+
+
+Verwendung von Environmentvariablen
+-----------------------------------
+
+
+Man kann die Parameter --hostname, --username, --password und --port ganz weglassen, wenn man die entsprechenden Daten in Environmentvariablen bereitstellt. Seit der Version 3.x kann man Servicedefinitionen in Nagios um eigene Attribute (custom object variables) erweitern. Diese tauchen dann bei der Ausführung des Checkcommands im Environment auf.
+
+Die Environmentvariablen heissen:
+
+* NAGIOS__SERVICEDB2_HOST (_db2_host in der Servicedefinition)
+* NAGIOS__SERVICEDB2_USER (_db2_user in der Servicedefinition)
+* NAGIOS__SERVICEDB2_PASS (_db2_pass in der Servicedefinition)
+* NAGIOS__SERVICEDB2_PORT (_db2_port in der Servicedefinition)
+* NAGIOS__SERVICEDB2_DATABASE (_db2_database in der Servicedefinition)
+
+
+
+Installation
+------------
+
+
+Dieses Plugin setzt die Installation des *Perl-Moduls DBD::DB2* voraus.
+
+Nach dem Auspacken des Archivs wird ./configure aufgerufen. Mit ./configure --help können Optionen angezeigt werden, die für den Bau des Plugins einige Defaulteinstellungen liefern.
+
+* --prefix=BASEDIRECTORY Geben Sie hier das Verzeichnis an, in dem check_db2_health liegen soll. (default: /usr/local/nagios)
+* --with-nagios-user=SOMEUSER Dieser User wird der Eigentümer der Datei check_db2_health sein. (default: nagios)
+* --with-nagios-group=SOMEGROUP Die Gruppe des check_db2_health Binaries. (default: nagios)
+* --with-perl=PATHTOPERL Geben sie hier den Pfad zum Perl-Interpreter an, den sie benutzen möchten. (default: perl im PATH)
+
+
+
+Download
+--------
+
+
+http://labs.consol.de/wp-content/uploads/2010/12/check_db2_health-1.0.3.tar.gz[check_db2_health-1.0.3.tar.gz]
+
+http://labs.consol.de/wp-content/uploads/2010/12/check_db2_health-1.0.3.shar.gz[check_db2_health-1.0.3.shar.gz]
+
+Changelog
+---------
+
+
+* 2010-10-01 1.0.3
++
+add mode report + 
+add mode dbthresholds + 
+mode sql can now have a non-numerical output + 
+fixed a bug in connected-users. (Thanks Alexander Titze)
+
+* 2010-10-01 1.0.2
++
+bufferpool-hitratio now uses hitratio_now to calculate the exitcode when --lookback is used + 
+add mode last-backup + 
+add mode sort-overflows + 
+index-usage takes delete- and insert-statements into account + 
+add mode sort-overflow-percentage (Thanks Birger Schmidt, Niko v. Koeckritz)
+
+* 2010-06-10 1.0.1
++
+Bugfix in connected-users. Danke Niko + 
+
+* 2009-10-01 1.0
++
+Erste öffentliche Version
+
+
+
+Copyright
+---------
+
+
+Gerhard Laußer
+
+Check_db2_health wird unter der GNU General Public License zur Verfügung gestellt.http://www.gnu.de/documents/gpl.de.html[GPL]
+
+Autor
+-----
+
+
+Gerhard Laußer (mailto:gerhard.lausser@consol.de[gerhard.lausser@consol.de]) beantwortet gerne Fragen zu diesem Plugin.
+
