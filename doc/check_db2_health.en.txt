@@ -11,8 +11,7 @@ Documentation
 Commandline parameters
 ~~~~~~~~~~~~~~~~~~~~~~
 
-
-* *--database <DB-Name>*The name of the database. (If it was catalogued locally, this parameter is the only you need. Otherwise you must specify database, hostname and port)* *  
+* *--database <DB-Name>* The name of the database. (If it was catalogued locally, this parameter is the only you need. Otherwise you must specify database, hostname and port)
 * *--hostname <hostname>* The database server
 * *--port <port>* The port, where DB2 listens
 * *--username <username>* The database user
@@ -29,6 +28,7 @@ Commandline parameters
 
 
 Using the --mode parameter with the following arguments tells the plugin what it should monitor.
+
 
 Modi
 ~~~~
@@ -55,22 +55,26 @@ Modi
 |log-utilization|Used space in a database log|0%..100% (80, 90)
 |last-backup|Days since the last database backup|0..n (1,2)
 |stale-table-runstats|Tables with statistics have not been updated in a while|0..n (7, -)
+|invalid-objects|Number of invalid objects in database (Trigger, Package, View, Routine, Table)|0..n (7, 99999)
+|duplicate-packages|Find packages names which exist more than one time|&#160;
+|capture-latency|Latency of the data processed by the capture program|0..n (10, 60)
+|subscription-set-latency|Latency of the subscription set(s)|0..n (600, 1200)
 |sql|Execute a custom sql statement which returns a numerical value. The statement itself is passed as an argument to the --name parameter. A label for the performance data can be set with the --name2 parameter. With the parameter --units you can add units (%, c, s, MB, GB,..) to the putput. If the sql statement contains special characters you can encode it first by using --mode encode.|0..n
+|sql-runtime|Runtime of a custom sql statement in seconds|0..n (1, 5)
 |list-databases|Outputs a list of all databases|&#160;
 |list-tablespaces|Outputs a list of all tablespaces|&#160;
 |list-bufferpools|Outputs a list of all bufferpools|&#160;
+|list-subscription-sets|Outputs a list of all subscription sets|&#160;
 |====
 
 
-Thresholds are set according to the plugin developer guidelines
+Thresholds are set according to the plugin developer guidelines + 
+"10" means "Alert, if > 10" and + 
+"90:" means "Alert, if < 90" +
 
-"10" means "Alert, if > 10" and
-
-"90:" means "Alert, if < 90"
 
 Preparation of the database
 ---------------------------
-
 
 In order for the plugin to retrieve the necessary information from the database, a (OS-)user "nagios" (with group nagios) is needed. Maybe it already exists because the database server is monitored with check_nrpe or check_by_ssh.
 
@@ -96,7 +100,6 @@ db2inst1$ db2stop; db2start
 
 Examples
 --------
-
 
 [source,txt]
 ----
@@ -177,7 +180,6 @@ OK - 0.000000% of the time was spent waiting for locks | lock_percent_waiting=0.
 Using environment variables
 ---------------------------
 
-
 The parameters --hostname, --username, --password and --port can be omitted, if the corresponding data are available via environment variables. Since version 3.x of nagios, service definitions can have custom attributes, which can be used to specify login data. During the plugin execution they are available as environment variables .
 
 Die Environmentvariablen heissen:
@@ -193,7 +195,6 @@ Die Environmentvariablen heissen:
 Installation
 ------------
 
-
 This plugin requires the installation of the *Perl-Module DBD::DB2* .
 
 After unpacking the tar archive you have to run ./configure. With ./configure --help you get the list of possible options.
@@ -208,14 +209,12 @@ After unpacking the tar archive you have to run ./configure. With ./configure --
 Download
 --------
 
-
 http://labs.consol.de/wp-content/uploads/2010/12/check_db2_health-1.0.3.tar.gz[check_db2_health-1.0.3.tar.gz]
 
 http://labs.consol.de/wp-content/uploads/2010/12/check_db2_health-1.0.3.shar.gz[check_db2_health-1.0.3.shar.gz]
 
 Changelog
 ---------
-
 
 * 2010-10-01 1.0.3
 +
@@ -244,14 +243,13 @@ First public release
 Copyright
 ---------
 
-
 Gerhard Lausser
 
 Check_db2_health is released under the GNU General Public License.http://www.gnu.de/documents/gpl.en.html[GPL]
 
+
 Autor
 -----
-
 
 Gerhard Laußer (mailto:gerhard.lausser@consol.de[gerhard.lausser@consol.de]) will gladly answer your questions.
 

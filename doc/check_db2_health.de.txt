@@ -57,22 +57,26 @@ Modi
 |log-utilization|Belegter Speicherplatz in einem Datenbank-Log|0%..100% (80, 90)
 |last-backup|Anzahl der Tage seit dem letzten Backup|0..n (1,2)
 |stale-table-runstats|Tabellen, deren Statistiken seit n Tagen nicht aktualisiert wurden|0..n (7, -)
+|invalid-objects|Anzahl fehlerhafter Objekte in der Datenbank (Trigger, Package, View, Routine, Table)|0..n (7, 99999)
+|duplicate-packages|Packages mit gleichlautendem Namen|&#160;
+|capture-latency|Latency der vom Capture-Prozesse verarbeiteten Daten (wertet auch --maxinactivity aus)|0..n (10, 60)
+|subscription-set-latency|Latency der Subscription Sets (wertet auch --maxinactivity aus)|0..n (600, 1200)
 |sql|Ergebnis eines beliebigen SQL-Befehls, der eine Zahl zurückliefert. Der Befehl selbst wird mit dem Parameter --name übergeben. Ein Label für Performncedaten kann mit dem Parameter --name2 übergeben werden. Mit dem Parameter --units kann die Ausgabe um Einheiten ergänzt werden (%, c, s, MB, GB,.. Wenn der SQL-Befehl Sonder- und Leerzeichen enthält, kann er mit dem mode encode zuerst encodiert werden.|0..n
+|sql-runtime|Laufzeit eines beliebigen SQL-Befehls in Sekunden. Der Befehl selbst wird mit dem Parameter --name übergeben.|0..n (1, 5)
 |list-databases|Gibt eine Liste aller Datenbanken aus|&#160;
 |list-tablespaces|Gibt eine Liste aller Tablespaces aus|&#160;
 |list-bufferpools|Gibt eine Liste aller Bufferpools aus|&#160;
+|list-subscription-sets|Gibt eine Liste aller Subscription Sets aus|&#160;
 |====
 
 
-Es ist zu beachten, daß Schwellwerte entsprechend den Nagios Developer Guidelines anzugeben sind.
-
-"10" bedeutet demzufolge "Alarm, wenn > 10" und
-
+Es ist zu beachten, daß Schwellwerte entsprechend den Nagios Developer Guidelines anzugeben sind. + 
+"10" bedeutet demzufolge "Alarm, wenn > 10" und + 
 "90:" bedeutet "Alarm, wenn < 90"
+
 
 Vorbereitung der Datenbank
 --------------------------
-
 
 Damit sich das Plugin die benötigten Informationen aus der Datenbank holen kann, legt man einen (Betriebssystem-)Benutzer nagios (mit gleichnamiger Gruppe) an. Eventuell gibt es diesen bereits, weil der Datenbankserver mit check_nrpe oder check_by_ssh überwacht wird.
 
@@ -195,7 +199,6 @@ Die Environmentvariablen heissen:
 Installation
 ------------
 
-
 Dieses Plugin setzt die Installation des *Perl-Moduls DBD::DB2* voraus.
 
 Nach dem Auspacken des Archivs wird ./configure aufgerufen. Mit ./configure --help können Optionen angezeigt werden, die für den Bau des Plugins einige Defaulteinstellungen liefern.
@@ -210,14 +213,11 @@ Nach dem Auspacken des Archivs wird ./configure aufgerufen. Mit ./configure --he
 Download
 --------
 
-
-http://labs.consol.de/wp-content/uploads/2010/12/check_db2_health-1.0.3.tar.gz[check_db2_health-1.0.3.tar.gz]
-
+http://labs.consol.de/wp-content/uploads/2010/12/check_db2_health-1.0.3.tar.gz[check_db2_health-1.0.3.tar.gz] +
 http://labs.consol.de/wp-content/uploads/2010/12/check_db2_health-1.0.3.shar.gz[check_db2_health-1.0.3.shar.gz]
 
 Changelog
 ---------
-
 
 * 2010-10-01 1.0.3
 +
@@ -247,14 +247,13 @@ Erste öffentliche Version
 Copyright
 ---------
 
-
 Gerhard Laußer
 
 Check_db2_health wird unter der GNU General Public License zur Verfügung gestellt.http://www.gnu.de/documents/gpl.de.html[GPL]
 
+
 Autor
 -----
-
 
 Gerhard Laußer (mailto:gerhard.lausser@consol.de[gerhard.lausser@consol.de]) beantwortet gerne Fragen zu diesem Plugin.
 
