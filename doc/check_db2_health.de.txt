@@ -213,8 +213,7 @@ Nach dem Auspacken des Archivs wird ./configure aufgerufen. Mit ./configure --he
 Download
 --------
 
-http://labs.consol.de/wp-content/uploads/2010/12/check_db2_health-1.0.3.tar.gz[check_db2_health-1.0.3.tar.gz] +
-http://labs.consol.de/wp-content/uploads/2010/12/check_db2_health-1.0.3.shar.gz[check_db2_health-1.0.3.shar.gz]
+http://labs.consol.de/download/shinken-nagios-plugins/check_db2_health-1.0.6.1.tar.gz[check_db2_health-1.0.6.1.tar.gz]
 
 Changelog
 ---------
