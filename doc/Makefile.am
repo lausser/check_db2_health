@@ -15,3 +15,8 @@ dedoc:
 
 endoc:
 	asciidoc --unsafe --no-header-footer -a max-width=800 $(PLUGIN).en.txt
+
+clean:
+	$(RM) $(PLUGIN).html
+	$(RM) $(PLUGIN).en.html
+	$(RM) $(PLUGIN).de.html

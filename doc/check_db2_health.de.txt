@@ -219,6 +219,51 @@ http://labs.consol.de/wp-content/uploads/2010/12/check_db2_health-1.0.3.shar.gz[
 Changelog
 ---------
 
+* 2013-01-01 1.0.6.1
++
+fix for newer perl versions
+
+* 2012-11-29 1.0.6
++
+implemented all sorts of thresholds +
+add mode sql-runtime
+
+* 2012-11-29 1.0.5.3
++
+fixed a bug in tablespace-usage/free (null-values in fs_total_size_kb/fs_used_size_kb of sms tbsp_type mean: unused)
+
+* 2012-05-16 1.0.5.2
++
+connected-users no longer counts internal db2 processes (appl_name like db2fw%)
+
+* 2012-02-28 1.0.5.1
++
+exceptions in mode duplicate-packages are possible (--name='^(?!(DUPPATTERN$)|(DUPPATTERN2$))' --regexp)
+
+* 2012-02-23 1.0.5
++
+add capture-latency, subscription-set-latency +
+add invalid-objects +
+add duplicate-packages +
+bugfix in timeout-alarm handling under windows
+
+* 2011-09-29 1.0.4
++
+fix a bug in save_state with capital letters in statefilesdir +
+single ticks around the --name argument under Windows CMD will be removed automatically 
+
+* 2011-07-01 1.0.3.3
++
+change stale-table-runstats so there are less unnecessary alerts (Thanks Niko v. Koeckritz)
+
+* 2011-06-03 1.0.3.2
++
+sites in an OMD (http://omdistro.org) environment have now private statefile directories
+
+* 2011-01-03 1.0.3.1
++
+bugfix in --mode sql (numeric vs. regexp result)
+
 * 2010-10-01 1.0.3
 +
 add mode report + 
