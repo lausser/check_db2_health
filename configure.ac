@@ -83,13 +83,7 @@ AC_ARG_WITH(perl,
   with_perl=$withval,with_perl=$PERL)
 AC_SUBST(PERL, $with_perl)
 
-AC_OUTPUT(
-  Makefile 
-  plugins-scripts/Makefile 
-  plugins-scripts/subst 
-  t/Makefile
-  doc/Makefile
-)
+AC_OUTPUT(Makefile plugins-scripts/Makefile plugins-scripts/subst t/Makefile doc/Makefile)
 
 ACX_FEATURE([with],[perl])
 ACX_FEATURE([with],[statefiles-dir])

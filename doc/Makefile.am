@@ -1,6 +1,6 @@
 PLUGIN=check_db2_health
 
-all: dedoc endoc
+docs: dedoc endoc
 	$(RM) $(PLUGIN).html
 	printf "<!-- [lang_de] -->\n\n" >> $(PLUGIN).html
 	cat $(PLUGIN).de.html >> $(PLUGIN).html
