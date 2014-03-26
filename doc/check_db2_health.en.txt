@@ -209,7 +209,7 @@ After unpacking the tar archive you have to run ./configure. With ./configure --
 Download
 --------
 
-http://labs.consol.de/download/shinken-nagios-plugins/check_db2_health-1.0.6.1.tar.gz[check_db2_health-1.0.6.1.tar.gz]
+http://labs.consol.de/download/shinken-nagios-plugins/check_db2_health-1.0.6.2.tar.gz[check_db2_health-1.0.6.2.tar.gz]
 
 
 Changelog
