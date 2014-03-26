@@ -160,13 +160,23 @@ sub nagios {
               ($1 ? (($1 eq 'data') ? 'data page ' : 'index ') : ''),
               $self->{$refkey})
       );
-      $self->add_perfdata(sprintf "\'bp_%s_hitratio\'=%.2f%%;%s;%s",
-          lc $self->{name},
-          $self->{hitratio},
-          $self->{warningrange}, $self->{criticalrange});
-      $self->add_perfdata(sprintf "\'bp_%s_hitratio_now\'=%.2f%%",
-          lc $self->{name},
-          $self->{hitratio_now});
+      if ($params{lookback}) {
+        $self->add_perfdata(sprintf "\'bp_%s_hitratio\'=%.2f%%",
+            lc $self->{name},
+            $self->{hitratio});
+        $self->add_perfdata(sprintf "\'bp_%s_hitratio_now\'=%.2f%%;%s;%s",
+            lc $self->{name},
+            $self->{hitratio_now},
+            $self->{warningrange}, $self->{criticalrange});
+      } else {
+        $self->add_perfdata(sprintf "\'bp_%s_hitratio\'=%.2f%%;%s;%s",
+            lc $self->{name},
+            $self->{hitratio},
+            $self->{warningrange}, $self->{criticalrange});
+        $self->add_perfdata(sprintf "\'bp_%s_hitratio_now\'=%.2f%%",
+            lc $self->{name},
+            $self->{hitratio_now});
+      }
     }
   }
 }
