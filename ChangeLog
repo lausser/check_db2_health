@@ -2,6 +2,10 @@
 # Changelog of the check_db2_health plugin #
 ###############################################
 
+1.0.6.2 - 2014-03-26
+- fix perfdata in bufferpool-usage&lookback
+- thresholds can now be floating point numbers
+
 1.0.6.1 - 2013-01-01
 - fix for newer perl versions
 

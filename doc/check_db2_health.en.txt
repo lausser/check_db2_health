@@ -216,6 +216,11 @@ http://labs.consol.de/wp-content/uploads/2010/12/check_db2_health-1.0.3.shar.gz[
 Changelog
 ---------
 
+* 2014-03-26 1.0.6.2
++
+fix perfdata in bufferpool-usage&lookback
+thresholds can now be floating point numbers
+
 * 2013-01-01 1.0.6.1
 +
 fix for newer perl versions
