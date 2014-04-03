@@ -265,6 +265,7 @@ my @params = (
     "statefilesdir=s",
     "with-mymodules-dyn-dir=s",
     "report=s",
+    "labelformat=s",
     "extra-opts:s");
 
 if (! GetOptions(\%commandline, @params)) {
@@ -331,6 +332,12 @@ if (exists $commandline{report}) {
   # short, long, html
 } else {
   $commandline{report} = "long";
+}
+
+if (exists $commandline{labelformat}) {
+  # groundwork
+} else {
+  $commandline{labelformat} = "pnp4nagios";
 }
 
 if (exists $commandline{'with-mymodules-dyn-dir'}) {
@@ -518,6 +525,7 @@ my %params = (
     statefilesdir => $commandline{statefilesdir},
     verbose => $commandline{verbose},
     report => $commandline{report},
+    labelformat => $commandline{labelformat},
     negate => $commandline{negate},
 );
 my $server = undef;
