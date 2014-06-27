@@ -53,12 +53,18 @@ my %ERRORCODES=( 0 => 'OK', 1 => 'WARNING', 2 => 'CRITICAL', 3 => 'UNKNOWN' );
       }
     } elsif (($params{mode} =~ /server::instance::database::tablespace::usage/) ||
         ($params{mode} =~ /server::instance::database::tablespace::free/) ||
+        ($params{mode} =~ /server::instance::database::tablespace::settings/) ||
         ($params{mode} =~ /server::instance::database::tablespace::remainingfreetime/)) {
       # evt snapcontainer statt container_utilization
       my @tablespaceresult = $params{handle}->fetchall_array(q{
         SELECT
             tbsp_name, tbsp_type, tbsp_state, tbsp_usable_size_kb,
-            tbsp_total_size_kb, tbsp_used_size_kb, tbsp_free_size_kb
+            tbsp_total_size_kb, tbsp_used_size_kb, tbsp_free_size_kb,
+            COALESCE(tbsp_using_auto_storage, 0),
+            COALESCE(tbsp_auto_resize_enabled, 0),
+            -- COALESCE(tbsp_increase_size,0), --bigint, conversion problems with dbd
+            CASE WHEN tbsp_increase_size IS NULL OR tbsp_increase_size = 0 THEN 0 ELSE 1 END,
+            COALESCE(tbsp_increase_size_percent, 0)
         FROM
             sysibmadm.tbsp_utilization
         WHERE
@@ -67,7 +73,8 @@ my %ERRORCODES=( 0 => 'OK', 1 => 'WARNING', 2 => 'CRITICAL', 3 => 'UNKNOWN' );
         SELECT
             tu.tbsp_name, tu.tbsp_type, tu.tbsp_state, tu.tbsp_usable_size_kb,
             tu.tbsp_total_size_kb, tu.tbsp_used_size_kb,
-            (cu.fs_total_size_kb - cu.fs_used_size_kb) AS tbsp_free_size_kb
+            (cu.fs_total_size_kb - cu.fs_used_size_kb) AS tbsp_free_size_kb,
+            0, 0, 0, 0
         FROM
             sysibmadm.tbsp_utilization tu
         INNER JOIN (
@@ -88,7 +95,8 @@ my %ERRORCODES=( 0 => 'OK', 1 => 'WARNING', 2 => 'CRITICAL', 3 => 'UNKNOWN' );
         SELECT
             tu.tbsp_name, tu.tbsp_type, tu.tbsp_state, tu.tbsp_usable_size_kb,
             tu.tbsp_total_size_kb, tu.tbsp_used_size_kb,
-            (cu.fs_total_size_kb - cu.fs_used_size_kb) AS tbsp_free_size_kb
+            (cu.fs_total_size_kb - cu.fs_used_size_kb) AS tbsp_free_size_kb,
+            0, 0, 0, 0
         FROM
             sysibmadm.tbsp_utilization tu
         INNER JOIN (
@@ -107,8 +115,13 @@ my %ERRORCODES=( 0 => 'OK', 1 => 'WARNING', 2 => 'CRITICAL', 3 => 'UNKNOWN' );
             (tu.tbsp_type = 'SMS' AND tu.tbsp_id = cu.tbsp_id)
       });
       foreach (@tablespaceresult) {
-        my ($name, $type, $state, $total_size, $usable_size, $used_size, $free_size) =
+        my ($name, $type, $state, $total_size, $usable_size, $used_size, $free_size,
+            $tbsp_using_auto_storage, $tbsp_auto_resize_enabled,
+            $tbsp_increase_size, $tbsp_increase_size_percent) =
             @{$_};
+        $type = $type =~ /^[dD]/ ? 'dms' : 'sms';
+        next if ($params{mode} =~ /::dms::manual$/ && ($type ne 'dms' || $tbsp_using_auto_storage));
+        next if ($params{mode} =~ /::dms$/ && ($type ne 'dms'));
         if ($params{regexp}) {
           next if $params{selectname} && $name !~ /$params{selectname}/;
         } else {
@@ -122,6 +135,10 @@ my %ERRORCODES=( 0 => 'OK', 1 => 'WARNING', 2 => 'CRITICAL', 3 => 'UNKNOWN' );
         $thisparams{usable_size} = $usable_size * 1024;
         $thisparams{used_size} = $used_size * 1024;
         $thisparams{free_size} = $free_size * 1024;
+        $thisparams{tbsp_using_auto_storage} = $tbsp_using_auto_storage;
+        $thisparams{tbsp_auto_resize_enabled} = $tbsp_auto_resize_enabled;
+        $thisparams{tbsp_increase_size} = $tbsp_increase_size;
+        $thisparams{tbsp_increase_size_percent} = $tbsp_increase_size_percent;
         my $tablespace = DBD::DB2::Server::Instance::Database::Tablespace->new(
             %thisparams);
         add_tablespace($tablespace);
@@ -148,12 +165,16 @@ sub new {
   my $self = {
     handle => $params{handle},
     name => $params{name},
-    type => ($params{type} =~ /^[dD]/ ? 'dms' : 'sms'),
+    type => $params{type},
     state => $params{state},
     total_size => $params{total_size},
     usable_size => $params{usable_size},
     used_size => $params{used_size},
     free_size => $params{free_size},
+    tbsp_using_auto_storage => $params{tbsp_using_auto_storage},
+    tbsp_auto_resize_enabled => $params{tbsp_auto_resize_enabled},
+    tbsp_increase_size => $params{tbsp_increase_size},
+    tbsp_increase_size_percent => $params{tbsp_increase_size_percent},
     warningrange => $params{warningrange},
     criticalrange => $params{criticalrange},
   };
@@ -166,7 +187,8 @@ sub init {
   my $self = shift;
   my %params = @_;
   $self->init_nagios();
-  if ($params{mode} =~ /server::instance::database::tablespace::(usage|free)/) {
+  if ($params{mode} =~ /server::instance::database::tablespace::settings::dms/) {
+  } elsif ($params{mode} =~ /server::instance::database::tablespace::(usage|free)/) {
     if ($self->{type} eq 'sms') {
       # hier ist usable == used
       $self->{usable_size} = $self->{used_size} + $self->{free_size};
@@ -217,7 +239,26 @@ sub nagios {
   my $self = shift;
   my %params = @_;
   if (! $self->{nagios_level}) {
-    if ($params{mode} =~ /server::instance::database::tablespace::usage/) {
+    if ($params{mode} =~ /server::instance::database::tablespace::settings::dms/) {
+      if ($self->{tbsp_using_auto_storage} == 1 &&
+          $self->{tbsp_auto_resize_enabled} != 1) {
+        $self->add_nagios_critical(sprintf "tbs %s has tbsp_using_auto_storage=%s and tbsp_auto_resize_enabled=%s",
+            lc $self->{name},
+            $self->{tbsp_using_auto_storage}, $self->{tbsp_auto_resize_enabled});
+      }
+      if ($self->{tbsp_using_auto_storage} == 1) {
+        if ($self->{tbsp_increase_size} == $self->{tbsp_increase_size_percent}) {
+          if ($self->{tbsp_increase_size} == 0) {
+            $self->add_nagios_critical(sprintf "tbs %s must set either tbsp_increase_size or tbsp_increase_size_percent",
+              lc $self->{name});
+          } else {
+            $self->add_nagios_critical(sprintf "tbs %s has both tbsp_increase_size and tbsp_increase_size_percent set",
+              lc $self->{name});
+          }
+        }
+      }
+      $self->add_nagios_ok(sprintf "tbs %s settings are ok", lc $self->{name});
+    } elsif ($params{mode} =~ /server::instance::database::tablespace::usage/) {
       $self->add_nagios(
           $self->check_thresholds($self->{percent_used}, "90", "98"),
               sprintf("tbs %s usage is %.2f%%", $self->{name}, $self->{percent_used})

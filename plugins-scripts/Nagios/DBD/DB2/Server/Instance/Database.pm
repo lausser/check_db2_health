@@ -113,6 +113,10 @@ sub init {
     if (my @tablespaces = 
         DBD::DB2::Server::Instance::Database::Tablespace::return_tablespaces()) {
       $self->{tablespaces} = \@tablespaces;
+    } elsif ($params{mode} =~ /::settings::dms/) {
+      $self->add_nagios_ok("there are no automatic dms tablespaces");
+    } elsif ($params{mode} =~ /::dms::manual/) {
+      $self->add_nagios_ok("there are no non-automatic dms tablespaces");
     } else {
       $self->add_nagios_critical("unable to aquire tablespace info");
     }
@@ -190,12 +194,30 @@ sub init {
           ($self->{rows_selected} / $self->{rows_read} * 100) : 100;
     }
   } elsif ($params{mode} =~ /server::instance::database::connectedusers/) {
-    #SELECT COUNT(*) FROM sysibmadm.applications WHERE appl_status = 'CONNECTED'
-    # there are a lot more stati than "connected". Applications can
-    # be connected although being in another state.
-    $self->{connected_users} = $self->{handle}->fetchrow_array(q{
-        SELECT COUNT(*) FROM sysibmadm.applications WHERE appl_name NOT LIKE 'db2fw%'
-    });
+    if ($self->version_is_minimum('9.8')) { # 9.7 Fixpack 1
+      $self->{connected_users} = $self->{handle}->fetchrow_array(q{
+          SELECT
+              COUNT(*)
+          FROM
+              sysibmadm.mon_connection_summary
+      });
+    } else {
+      #SELECT COUNT(*) FROM sysibmadm.applications WHERE appl_status = 'CONNECTED'
+      # there are a lot more stati than "connected". Applications can
+      # be connected although being in another state.
+DBI->trace(2);
+      $self->{connected_users} = $self->{handle}->fetchrow_array(q{
+          SELECT
+              COUNT(*)
+          FROM
+              sysibmadm.applications
+          WHERE
+          --     appl_name NOT LIKE 'db2fw%'
+          --AND
+              appl_name NOT IN ('db2lused', 'db2stmm')
+--, db2stmm', 'db2taskd', 'db2wlmd')
+      });
+    }
   } elsif ($params{mode} =~ /server::instance::database::lastbackup/) {
     my $sql = undef;
     if ($self->version_is_minimum('9.1')) {

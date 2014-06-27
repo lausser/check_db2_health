@@ -2,6 +2,13 @@
 # Changelog of the check_db2_health plugin #
 ###############################################
 
+1.0.7 - 2014-04-14
+- add mode dms-tablespace-usage/free which checks only non-automatic dms
+tablespaces
+- add mode dms-tablespace-settings which checks automatic dms tablespaces'
+auto/increase settings
+- bugfix in connected-users, db2-internal users are not counted any more
+
 1.0.6.3 - 2014-04-01
 - implement --negate old_level=new_level
 - output also ok-messages for my-modes
