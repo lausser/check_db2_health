@@ -2,6 +2,10 @@
 # Changelog of the check_db2_health plugin #
 ###############################################
 
+1.0.8 - 2014-07-07
+- fix mode dms-tablespace-settings
+- add mode application-usage
+
 1.0.7 - 2014-04-14
 - add mode dms-tablespace-usage/free which checks only non-automatic dms
 tablespaces

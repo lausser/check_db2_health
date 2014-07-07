@@ -240,13 +240,7 @@ sub nagios {
   my %params = @_;
   if (! $self->{nagios_level}) {
     if ($params{mode} =~ /server::instance::database::tablespace::settings::dms/) {
-      if ($self->{tbsp_using_auto_storage} == 1 &&
-          $self->{tbsp_auto_resize_enabled} != 1) {
-        $self->add_nagios_critical(sprintf "tbs %s has tbsp_using_auto_storage=%s and tbsp_auto_resize_enabled=%s",
-            lc $self->{name},
-            $self->{tbsp_using_auto_storage}, $self->{tbsp_auto_resize_enabled});
-      }
-      if ($self->{tbsp_using_auto_storage} == 1) {
+      if ($self->{tbsp_auto_resize_enabled} == 1) {
         if ($self->{tbsp_increase_size} == $self->{tbsp_increase_size_percent}) {
           if ($self->{tbsp_increase_size} == 0) {
             $self->add_nagios_critical(sprintf "tbs %s must set either tbsp_increase_size or tbsp_increase_size_percent",
@@ -257,7 +251,9 @@ sub nagios {
           }
         }
       }
-      $self->add_nagios_ok(sprintf "tbs %s settings are ok", lc $self->{name});
+      if (! $self->{nagios_level}) {
+        $self->add_nagios_ok(sprintf "tbs %s settings are ok", lc $self->{name});
+      }
     } elsif ($params{mode} =~ /server::instance::database::tablespace::usage/) {
       $self->add_nagios(
           $self->check_thresholds($self->{percent_used}, "90", "98"),

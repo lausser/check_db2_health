@@ -1088,18 +1088,13 @@ sub fetchall_hashref {
   my $sth = undef;
   my $hashref = undef;
   eval {
-DBI->trace(3);
-
     $sth = $self->{handle}->prepare($sql);
-$sth->{db2_concurrency} = 'SQL_CONCUR_READ_ONLY';
+    $sth->{db2_concurrency} = 'SQL_CONCUR_READ_ONLY';
     if (scalar(@arguments)) {
       $sth->execute(@arguments);
     } else {
       $sth->execute();
     }
-while (my $orks = $sth->fetchrow_arrayref()) {
-printf "doof: %s\n", Data::Dumper::Dumper($orks);
-}
     $hashref = $sth->fetchall_hashref($hashkey);
   };
   if ($@) {

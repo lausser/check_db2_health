@@ -200,24 +200,54 @@ sub init {
               COUNT(*)
           FROM
               sysibmadm.mon_connection_summary
-      });
+      }) || 0;
     } else {
       #SELECT COUNT(*) FROM sysibmadm.applications WHERE appl_status = 'CONNECTED'
       # there are a lot more stati than "connected". Applications can
       # be connected although being in another state.
-DBI->trace(2);
       $self->{connected_users} = $self->{handle}->fetchrow_array(q{
           SELECT
               COUNT(*)
           FROM
               sysibmadm.applications
           WHERE
-          --     appl_name NOT LIKE 'db2fw%'
-          --AND
-              appl_name NOT IN ('db2lused', 'db2stmm')
---, db2stmm', 'db2taskd', 'db2wlmd')
-      });
+              appl_name NOT LIKE 'db2fw%'
+          AND
+              appl_name NOT IN ('db2lused', 'db2stmm', 'db2taskd', 'db2wlmd')
+      }) || 0;
     }
+  } elsif ($params{mode} =~ /server::instance::database::applusage/) {
+    if ($self->version_is_minimum('9.8')) { # 9.7 Fixpack 1
+      $self->{connected_users} = $self->{handle}->fetchrow_array(q{
+          SELECT
+              COUNT(*)
+          FROM
+              sysibmadm.mon_connection_summary
+      }) || 0;
+    } else {
+      #SELECT COUNT(*) FROM sysibmadm.applications WHERE appl_status = 'CONNECTED'
+      # there are a lot more stati than "connected". Applications can
+      # be connected although being in another state.
+      $self->{connected_users} = $self->{handle}->fetchrow_array(q{
+          SELECT
+              COUNT(*)
+          FROM
+              sysibmadm.applications
+          --WHERE
+          --    appl_name NOT LIKE 'db2fw%'
+          --AND
+          --    appl_name NOT IN ('db2lused', 'db2stmm', 'db2taskd', 'db2wlmd')
+      }) || 0;
+    }
+    $self->{maxappls} = $self->{handle}->fetchrow_array(q{
+        SELECT
+            VALUE
+        FROM
+            sysibmadm.dbcfg
+        WHERE
+            name = 'maxappls'
+    });
+    $self->{applusage} = 100 * $self->{connected_users} / $self->{maxappls};
   } elsif ($params{mode} =~ /server::instance::database::lastbackup/) {
     my $sql = undef;
     if ($self->version_is_minimum('9.1')) {
@@ -379,6 +409,14 @@ sub nagios {
       $self->add_perfdata(sprintf "connected_users=%d;%d;%d",
           $self->{connected_users},
           $self->{warningrange}, $self->{criticalrange});
+    } elsif ($params{mode} =~ /server::instance::database::applusage/) {
+      $self->add_nagios(
+          $self->check_thresholds($self->{applusage}, 70, 80),
+          sprintf "%d applications (of %d) are running = %.2f%%",
+              $self->{connected_users}, $self->{maxappls}, $self->{applusage});
+      $self->add_perfdata(sprintf "applusage=%.2f;%d;%d",
+          $self->{applusage},
+          $self->{warningrange}, $self->{criticalrange});
     } elsif ($params{mode} =~ /server::instance::database::srp/) {
       $self->add_nagios(
           $self->check_thresholds($self->{srp}, '90:', '80:'),       
@@ -453,7 +491,6 @@ sub nagios {
       }
       $self->add_perfdata(sprintf "dup_pkgs=%d", scalar(@{$self->{duplicate_packages}}));
     } elsif ($params{mode} =~ /server::instance::database::sortoverflows/) {
-      printf STDERR "%s\n", Data::Dumper::Dumper($self->{sort_overflows_per_sec});
       $self->add_nagios(
           $self->check_thresholds($self->{sort_overflows_per_sec}, 0.01, 0.1),       
           sprintf "%.2f sort overflows per sec", $self->{sort_overflows_per_sec});
