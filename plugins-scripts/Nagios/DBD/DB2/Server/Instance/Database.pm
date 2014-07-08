@@ -195,49 +195,49 @@ sub init {
     }
   } elsif ($params{mode} =~ /server::instance::database::connectedusers/) {
     if ($self->version_is_minimum('9.8')) { # 9.7 Fixpack 1
-      $self->{connected_users} = $self->{handle}->fetchrow_array(q{
+      @{$self->{connected_users}} = $self->{handle}->fetchall_array(q{
           SELECT
-              COUNT(*)
+              application_name
           FROM
               sysibmadm.mon_connection_summary
-      }) || 0;
+      });
     } else {
       #SELECT COUNT(*) FROM sysibmadm.applications WHERE appl_status = 'CONNECTED'
       # there are a lot more stati than "connected". Applications can
       # be connected although being in another state.
-      $self->{connected_users} = $self->{handle}->fetchrow_array(q{
+      @{$self->{connected_users}} = $self->{handle}->fetchall_array(q{
           SELECT
-              COUNT(*)
+              appl_name
           FROM
               sysibmadm.applications
           WHERE
               appl_name NOT LIKE 'db2fw%'
           AND
               appl_name NOT IN ('db2lused', 'db2stmm', 'db2taskd', 'db2wlmd')
-      }) || 0;
+      });
     }
   } elsif ($params{mode} =~ /server::instance::database::applusage/) {
     if ($self->version_is_minimum('9.8')) { # 9.7 Fixpack 1
-      $self->{connected_users} = $self->{handle}->fetchrow_array(q{
+      @{$self->{connected_users}} = $self->{handle}->fetchall_array(q{
           SELECT
-              COUNT(*)
+              application_name
           FROM
               sysibmadm.mon_connection_summary
-      }) || 0;
+      });
     } else {
       #SELECT COUNT(*) FROM sysibmadm.applications WHERE appl_status = 'CONNECTED'
       # there are a lot more stati than "connected". Applications can
       # be connected although being in another state.
-      $self->{connected_users} = $self->{handle}->fetchrow_array(q{
+      @{$self->{connected_users}} = $self->{handle}->fetchall_array(q{
           SELECT
-              COUNT(*)
+              appl_name
           FROM
               sysibmadm.applications
-          --WHERE
-          --    appl_name NOT LIKE 'db2fw%'
-          --AND
-          --    appl_name NOT IN ('db2lused', 'db2stmm', 'db2taskd', 'db2wlmd')
-      }) || 0;
+          WHERE
+              appl_name NOT LIKE 'db2fw%'
+          AND
+              appl_name NOT IN ('db2lused', 'db2stmm', 'db2taskd', 'db2wlmd')
+      });
     }
     $self->{maxappls} = $self->{handle}->fetchrow_array(q{
         SELECT
@@ -247,7 +247,7 @@ sub init {
         WHERE
             name = 'maxappls'
     });
-    $self->{applusage} = 100 * $self->{connected_users} / $self->{maxappls};
+    $self->{applusage} = 100 * scalar(@{$self->{connected_users}}) / $self->{maxappls};
   } elsif ($params{mode} =~ /server::instance::database::lastbackup/) {
     my $sql = undef;
     if ($self->version_is_minimum('9.1')) {
@@ -403,17 +403,20 @@ sub nagios {
           $self->{warningrange}, $self->{criticalrange});
     } elsif ($params{mode} =~ /server::instance::database::connectedusers/) {
       $self->add_nagios(
-          $self->check_thresholds($self->{connected_users}, 50, 100),
-          sprintf "%d connected users",
-              $self->{connected_users});
+          $self->check_thresholds(scalar(@{$self->{connected_users}}), 50, 100),
+          sprintf "%d connected users (%s)",
+              scalar(@{$self->{connected_users}}),
+              join(",", map { $_->[0] } @{$self->{connected_users}}));
       $self->add_perfdata(sprintf "connected_users=%d;%d;%d",
-          $self->{connected_users},
+          scalar(@{$self->{connected_users}}),
           $self->{warningrange}, $self->{criticalrange});
     } elsif ($params{mode} =~ /server::instance::database::applusage/) {
       $self->add_nagios(
           $self->check_thresholds($self->{applusage}, 70, 80),
-          sprintf "%d applications (of %d) are running = %.2f%%",
-              $self->{connected_users}, $self->{maxappls}, $self->{applusage});
+          sprintf "%d applications of max. %d are running = %.2f%%. (%s)",
+              scalar(@{$self->{connected_users}}), $self->{maxappls},
+              $self->{applusage},
+              join(",", map { $_->[0] } @{$self->{connected_users}}));
       $self->add_perfdata(sprintf "applusage=%.2f;%d;%d",
           $self->{applusage},
           $self->{warningrange}, $self->{criticalrange});
