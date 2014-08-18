@@ -250,7 +250,13 @@ sub init {
     $self->{applusage} = 100 * scalar(@{$self->{connected_users}}) / $self->{maxappls};
   } elsif ($params{mode} =~ /server::instance::database::lastbackup/) {
     my $sql = undef;
-    if ($self->version_is_minimum('9.1')) {
+    if ($self->version_is_minimum('10')) {
+      $sql = sprintf "SELECT (DAYS(current timestamp) - DAYS(last_backup)) * 86400 + (MIDNIGHT_SECONDS(current timestamp) - MIDNIGHT_SECONDS(last_backup)) FROM sysibm.sysdummy1, TABLE(snap_get_db('%s', -2))", $self->{name};
+    } elsif ($self->version_is_minimum('9.7')) {
+      $sql = sprintf "SELECT (DAYS(current timestamp) - DAYS(last_backup)) * 86400 + (MIDNIGHT_SECONDS(current timestamp) - MIDNIGHT_SECONDS(last_backup)) FROM sysibm.sysdummy1, TABLE(snap_get_db_v97('%s', -2))", $self->{name};
+    } elsif ($self->version_is_minimum('9.5')) {
+      $sql = sprintf "SELECT (DAYS(current timestamp) - DAYS(last_backup)) * 86400 + (MIDNIGHT_SECONDS(current timestamp) - MIDNIGHT_SECONDS(last_backup)) FROM sysibm.sysdummy1, TABLE(snap_get_db_v95('%s', -2))", $self->{name};
+    } elsif ($self->version_is_minimum('9.1')) {
       $sql = sprintf "SELECT (DAYS(current timestamp) - DAYS(last_backup)) * 86400 + (MIDNIGHT_SECONDS(current timestamp) - MIDNIGHT_SECONDS(last_backup)) FROM sysibm.sysdummy1, TABLE(snap_get_db_v91('%s', -2))", $self->{name};
     } else {
       $sql = sprintf "SELECT last_backup FROM table(snap_get_db('%s', -2))",
