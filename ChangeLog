@@ -2,6 +2,13 @@
 # Changelog of the check_db2_health plugin #
 ###############################################
 
+1.0.9.2 - 2014-08-21
+- fix mode last-backup again
+- report sql/permission-errors
+
+1.0.9.1 - 2014-08-19
+- fix mode last-backup
+
 1.0.9 - 2014-08-18
 - fix mode last-backup for 10.x
 
