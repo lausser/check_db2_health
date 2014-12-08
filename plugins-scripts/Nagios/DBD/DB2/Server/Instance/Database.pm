@@ -249,13 +249,37 @@ sub init {
     });
     $self->{applusage} = 100 * scalar(@{$self->{connected_users}}) / $self->{maxappls};
   } elsif ($params{mode} =~ /server::instance::database::lastbackup/) {
+    # DB2 for Linux UNIX and Windows 8.2.0
+    # The SNAP_GET_DB table function returns snapshot information
+    # DB2 Version 9 for Linux, UNIX, and Window
+    # SNAP_GET_DB - This table function has been deprecated and replaced by the SNAPDB administrative view and SNAP_GET_DB_V91 table function
+    # DB2 Version 9.5 for Linux, UNIX, and Windows
+    # SNAP_GET_DB - This table function has been deprecated and replaced by the SNAP_GET_DB_V91 table function
+    # The SNAPDB administrative view and the SNAP_GET_DB_V95 table function return snapshot information
+    # DB2 Version 9.7 for Linux, UNIX, and Windows
+    # The SNAPDB administrative view and the SNAP_GET_DB_V97 table function return snapshot information
+    # DB2 Version 9.8 for Linux, UNIX, and Windows
+    # The SNAP_GET_DB_V95 table function has been deprecated and replaced by the SNAP_GET_DB_V97 table function
+    # DB2 Version 10.1 for Linux, UNIX, and Windows
+    # The SNAPDB administrative view and the SNAP_GET_DB table function return snapshot information
+    # DB2 10.5 for Linux, UNIX, and Windows
+    # SNAPDB administrative view and SNAP_GET_DB table function - 
+    #   The SNAPDB administrative view and SNAP_GET_DB table function are deprecated and have been replaced by the MON_GET_DATABASE table function - Get database information metrics
+    #   The SNAP_GET_DB_V97 table function is deprecated and has been replaced by the MON_GET_DATABASE table function
     my $sql = undef;
-    if ($self->version_is_minimum('9.1')) {
-      $sql = sprintf "SELECT (DAYS(current timestamp) - DAYS(last_backup)) * 86400 + (MIDNIGHT_SECONDS(current timestamp) - MIDNIGHT_SECONDS(last_backup)) FROM sysibm.sysdummy1, TABLE(snap_get_db_v91('%s', -2))", $self->{name};
-    } else {
-      $sql = sprintf "SELECT last_backup FROM table(snap_get_db('%s', -2))",
-          $self->{name};
-    }
+    if ($self->version_is_minimum('10.5')) { 
+      $sql = sprintf "SELECT (DAYS(current timestamp) - DAYS(last_backup)) * 86400 + (MIDNIGHT_SECONDS(current timestamp) - MIDNIGHT_SECONDS(last_backup)) FROM sysibm.sysdummy1, TABLE(mon_get_database(-1)) AS T";
+    } elsif ($self->version_is_minimum('10')) { 
+      $sql = sprintf "SELECT (DAYS(current timestamp) - DAYS(last_backup)) * 86400 + (MIDNIGHT_SECONDS(current timestamp) - MIDNIGHT_SECONDS(last_backup)) FROM sysibm.sysdummy1, TABLE(snap_get_db('', -1)) AS T";
+    } elsif ($self->version_is_minimum('9.7')) { 
+      $sql = sprintf "SELECT (DAYS(current timestamp) - DAYS(last_backup)) * 86400 + (MIDNIGHT_SECONDS(current timestamp) - MIDNIGHT_SECONDS(last_backup)) FROM sysibm.sysdummy1, TABLE(snap_get_db_v97('', -1)) AS T";
+    } elsif ($self->version_is_minimum('9.5')) { 
+      $sql = sprintf "SELECT (DAYS(current timestamp) - DAYS(last_backup)) * 86400 + (MIDNIGHT_SECONDS(current timestamp) - MIDNIGHT_SECONDS(last_backup)) FROM sysibm.sysdummy1, TABLE(snap_get_db_v95('', -1)) AS T";
+    } elsif ($self->version_is_minimum('9.1')) { 
+      $sql = sprintf "SELECT (DAYS(current timestamp) - DAYS(last_backup)) * 86400 + (MIDNIGHT_SECONDS(current timestamp) - MIDNIGHT_SECONDS(last_backup)) FROM sysibm.sysdummy1, TABLE(snap_get_db_v91('', -1)) AS T";
+    } else { 
+      $sql = sprintf "SELECT last_backup FROM table(snap_get_db('', -1))";
+    } 
     $self->{last_backup} = $self->{handle}->fetchrow_array($sql);
     $self->{last_backup} = $self->{last_backup} ? $self->{last_backup} : 0;
     # time is measured in days
@@ -449,6 +473,14 @@ sub nagios {
       $self->add_perfdata(sprintf "last_backup=%.2f;%s;%s",
           $self->{last_backup},
           $self->{warningrange}, $self->{criticalrange});
+      if ($self->{handle}->{errstr}) {
+        $self->{handle}->{errstr} =~ s/(.*)\n(.+)/$1,$2/g;
+        chomp $self->{handle}->{errstr};
+        $self->add_nagios(
+            defined $params{mitigation} ? $params{mitigation} : 1,
+            sprintf("error accessing %s: %s", $self->{name}, $self->{handle}->{errstr})
+        );  
+      }   
     } elsif ($params{mode} =~ /server::instance::database::staletablerunstats/) {
       # we only use warnings here
       $self->check_thresholds(0, 7, 99999);

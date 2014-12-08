@@ -1041,6 +1041,8 @@ sub fetchrow_array {
   }; 
   if ($@) {
     $self->debug(sprintf "bumm %s", $@);
+  } elsif ($sth->errstr()) {
+    $self->{errstr} = $sth->errstr()
   }
   if (-f "/tmp/check_db2_health_simulation/".$self->{mode}) {
     my $simulation = do { local (@ARGV, $/) = 
@@ -1071,6 +1073,8 @@ sub fetchall_array {
   }; 
   if ($@) {
     printf STDERR "bumm %s\n", $@;
+  } elsif ($sth->errstr()) {
+    $self->{errstr} = $sth->errstr()
   }
   if (-f "/tmp/check_db2_health_simulation/".$self->{mode}) {
     my $simulation = do { local (@ARGV, $/) = 

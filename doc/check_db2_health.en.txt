@@ -97,6 +97,13 @@ db2inst1$ db2 grant select,update on table SYSTOOLS.STMG_DBSIZE_INFO to nagios
 db2inst1$ db2stop; db2start
 ----
 
+For version 10.5 (Caution, 10.x is not officially supported. You have to pay for the implementation) you also need the following command:
+
+[source,txt]
+----
+db2inst1$ db2 grant execute on function sysproc.MON_GET_DATABASE to nagios
+----
+
 
 Examples
 --------
@@ -209,11 +216,40 @@ After unpacking the tar archive you have to run ./configure. With ./configure --
 Download
 --------
 
-http://labs.consol.de/download/shinken-nagios-plugins/check_db2_health-1.0.6.2.tar.gz[check_db2_health-1.0.6.2.tar.gz]
+http://labs.consol.de/download/shinken-nagios-plugins/check_db2_health-1.0.9.2.tar.gz[check_db2_health-1.0.9.2.tar.gz]
 
 
 Changelog
 ---------
+
+* 1.0.9.2 - 2014-08-21
++
+fix mode last-backup again
+report sql/permission-errors
+
+* 1.0.9.1 - 2014-08-19
++
+fix mode last-backup
+
+* 1.0.9 - 2014-08-18
++
+fix mode last-backup for 10.x
+
+* 1.0.8 - 2014-07-07
++
+fix mode dms-tablespace-settings
+add mode application-usage
+
+* 1.0.7 - 2014-04-14
++
+add mode dms-tablespace-usage/free which checks only non-automatic dms tablespaces
+add mode dms-tablespace-settings which checks automatic dms tablespaces' auto/increase settings
+bugfix in connected-users, db2-internal users are not counted any more
+
+* 1.0.6.3 - 2014-04-01
++
+implement --negate old_level=new_level
+output also ok-messages for my-modes
 
 * 2014-03-26 1.0.6.2
 +
