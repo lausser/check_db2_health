@@ -7,6 +7,9 @@ use IO::File;
 use File::Copy 'cp';
 use Data::Dumper;
 
+my %ERRORS=( OK => 0, WARNING => 1, CRITICAL => 2, UNKNOWN => 3 );
+my %ERRORCODES=( 0 => 'OK', 1 => 'WARNING', 2 => 'CRITICAL', 3 => 'UNKNOWN' );
+
 
 {
   our $verbose = 0;
@@ -904,6 +907,16 @@ sub convert_db2_timestamp {
   }
 }
 
+sub decode_password {
+  my $self = shift;
+  my $password = shift;
+  if ($password && $password =~ /^rfc3986:\/\/(.*)/) {
+    $password = $1;
+    $password =~ s/\%([A-Fa-f0-9]{2})/pack('C', hex($1))/seg;
+  }
+  return $password;
+}
+
 
 package DBD::DB2::Server::Connection;
 
@@ -1005,7 +1018,7 @@ sub init {
       if ($self->{handle} = DBI->connect(
           $self->{dsn},
           $self->{username},
-          $self->{password},
+          $self->decode_password($self->{password}),
           { RaiseError => 0, AutoCommit => 1, PrintError => 0 })) {
         $retval = $self;
       } else {
@@ -1161,17 +1174,17 @@ sub init {
       }
     }
   } else {
-    if (! $self->{connect} || ! $self->{user} || ! $self->{password}) {
-      if ($self->{connect} && $self->{connect} =~ /(\w+)\/(\w+)@([\.\w]+):(\d+)/) {
-        $self->{user} = $1;
+    if (! $self->{connect} || ! $self->{username} || ! $self->{password}) {
+      if ($self->{connect} && $self->{connect} =~ /(\w+?)\/(.+)@([\.\w]+):(\d+)/) {
+        $self->{username} = $1;
         $self->{password} = $2;
-        $self->{host} = $3; 
+        $self->{host} = $3;
         $self->{port} = $4;
         $self->{socket} = "";
-      } elsif ($self->{connect} && $self->{connect} =~ /(\w+)\/(\w+)@([\.\w]+):([\w\/]+)/) {
-        $self->{user} = $1;
+      } elsif ($self->{connect} && $self->{connect} =~ /(\w+?)\/(.+)@([\.\w]+):([\w\/]+)/) {
+        $self->{username} = $1;
         $self->{password} = $2;
-        $self->{host} = $3; 
+        $self->{host} = $3;
         $self->{socket} = $4;
         $self->{port} = "";
       } else {
@@ -1199,21 +1212,22 @@ sub init {
       use POSIX ':signal_h';
       if ($^O =~ /MSWin/) {
         local $SIG{'ALRM'} = sub {
-          die "alarm\n";
+          die "timeout alarm\n";
         };
       } else {
-        my $mask = POSIX::SigSet->new( SIGALRM );
+        my $mask = POSIX::SigSet->new(SIGALRM);
         my $action = POSIX::SigAction->new(
-            sub { die "alarm\n" ; }, $mask);
-        my $oldaction = POSIX::SigAction->new();
-        sigaction(SIGALRM ,$action ,$oldaction );
+            sub { die "timeout alarm\n" ; }, $mask);
+        my $old_action = POSIX::SigAction->new();
+        $self->{old_action} = $old_action;
+        sigaction(SIGALRM, $action, $old_action);
       }
       alarm($self->{timeout} - 1); # 1 second before the global unknown timeout
       if ($self->{handle} = DBI->connect(
           sprintf("DBI:SQLRelay:host=%s;port=%d;socket=%s", $self->{host}, $self->{port}, $self->{socket}),
-          $self->{user},
-          $self->{password},
-          { RaiseError => 1, AutoCommit => 0, PrintError => 1 })) {
+          $self->{username},
+          $self->decode_password($self->{password}),
+          { RaiseError => 1, AutoCommit => $self->{commit}, PrintError => 1 })) {
         $self->{handle}->do(q{
             ALTER SESSION SET NLS_NUMERIC_CHARACTERS=".," });
         $retval = $self;

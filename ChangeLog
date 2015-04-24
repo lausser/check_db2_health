@@ -2,6 +2,9 @@
 # Changelog of the check_db2_health plugin #
 ###############################################
 
+1.1 - 2015-04-23
+- add rfc3986-encoded passwords
+
 1.0.9.2 - 2014-08-21
 - fix mode last-backup again
 - report sql/permission-errors
