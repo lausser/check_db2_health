@@ -46,20 +46,42 @@ my %ERRORCODES=( 0 => 'OK', 1 => 'WARNING', 2 => 'CRITICAL', 3 => 'UNKNOWN' );
         return undef;
       }
     } elsif ($params{mode} =~ /server::instance::database::bufferpool::hitratio/) {
-      my $sql = q{
-        SELECT 
-          bp_name,
-          pool_data_p_reads, pool_index_p_reads,
-          pool_data_l_reads, pool_index_l_reads
-        FROM 
-          TABLE( snapshot_bp( 'THISDATABASE', -1 ))
-        AS 
-          snap
-        INNER JOIN
-          syscat.bufferpools sbp
-        ON
-          sbp.bpname = snap.bp_name
-      };
+      # Tabellenfunktion SNAPSHOT_BP veraltet seit 9.1, ersetzt seit 9.7
+      # Tabellenfunktion MON_GET_BUFFERPOOL
+      # 9.5 SNAPSHOT_GET_BP 
+      # deprecated by SNAP_GET_BP_V95  lohnt sich nicht
+      my $sql = undef;
+      if ($self->version_is_minimum('9.7')) {
+        $sql = q{
+          SELECT 
+            bp_name,
+            pool_data_p_reads, pool_index_p_reads,
+            pool_data_l_reads, pool_index_l_reads
+          FROM 
+            TABLE(MON_GET_BUFFERPOOL('',-2))
+          AS 
+            snap
+          INNER JOIN
+            syscat.bufferpools sbp
+          ON
+            sbp.bpname = snap.bp_name
+        };
+      } else {
+        $sql = q{
+          SELECT 
+            bp_name,
+            pool_data_p_reads, pool_index_p_reads,
+            pool_data_l_reads, pool_index_l_reads
+          FROM 
+            TABLE( snapshot_bp( 'THISDATABASE', -1 ))
+          AS 
+            snap
+          INNER JOIN
+            syscat.bufferpools sbp
+          ON
+            sbp.bpname = snap.bp_name
+        };
+      }
       $sql =~ s/THISDATABASE/$params{database}/g;
       my @bufferpoolresult = $params{handle}->fetchall_array($sql);
       foreach (@bufferpoolresult) {
