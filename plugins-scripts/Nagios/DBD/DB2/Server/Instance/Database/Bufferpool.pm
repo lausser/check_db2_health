@@ -51,7 +51,7 @@ my %ERRORCODES=( 0 => 'OK', 1 => 'WARNING', 2 => 'CRITICAL', 3 => 'UNKNOWN' );
       # 9.5 SNAPSHOT_GET_BP 
       # deprecated by SNAP_GET_BP_V95  lohnt sich nicht
       my $sql = undef;
-      if ($self->version_is_minimum('9.7')) {
+      if (DBD::DB2::Server::return_first_server()->version_is_minimum('9.7')) {
         $sql = q{
           SELECT 
             bp_name,
