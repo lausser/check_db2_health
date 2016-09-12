@@ -354,6 +354,7 @@ sub add_nagios {
   my $self = shift;
   my $level = shift;
   my $message = shift;
+  $level = $ERRORS{uc $level} if $level !~ /^\d+$/;
   push(@{$self->{nagios}->{messages}->{$level}}, $message);
   # recalc current level
   foreach my $llevel (qw(CRITICAL WARNING UNKNOWN OK)) {

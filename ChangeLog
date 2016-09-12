@@ -1,3 +1,5 @@
+* 1.1.1.2 - 2016-08-19
+  bugfix in last-backup (Thanks Volker Maibaum)
 * 1.1.1.1 - 2015-09-09
   bugfix in bufferpool (perl-error)
 * 1.1.1 -2015-08-10

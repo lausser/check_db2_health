@@ -281,9 +281,10 @@ sub init {
       $sql = sprintf "SELECT last_backup FROM table(snap_get_db('', -1))";
     } 
     $self->{last_backup} = $self->{handle}->fetchrow_array($sql);
-    $self->{last_backup} = $self->{last_backup} ? $self->{last_backup} : 0;
-    # time is measured in days
-    $self->{last_backup} = $self->{last_backup} / 86400;
+    if (defined $self->{last_backup}) {
+      # time is measured in days
+      $self->{last_backup} = $self->{last_backup} / 86400;
+    }
   } elsif ($params{mode} =~ /server::instance::database::staletablerunstats/) {
     @{$self->{stale_tables}} = $self->{handle}->fetchall_array(q{
       SELECT
@@ -466,13 +467,20 @@ sub nagios {
           $self->{index_usage},
           $self->{warningrange}, $self->{criticalrange});
     } elsif ($params{mode} =~ /server::instance::database::lastbackup/) {
-      $self->add_nagios(
-          $self->check_thresholds($self->{last_backup}, '1', '2'),
-          sprintf "last backup of db %s was %.2f days ago",
-              $self->{name}, $self->{last_backup});
-      $self->add_perfdata(sprintf "last_backup=%.2f;%s;%s",
-          $self->{last_backup},
-          $self->{warningrange}, $self->{criticalrange});
+      if (defined $self->{last_backup}) {
+        $self->add_nagios(
+            $self->check_thresholds($self->{last_backup}, '1', '2'),
+            sprintf "last backup of db %s was %.2f days ago",
+                $self->{name}, $self->{last_backup});
+        $self->add_perfdata(sprintf "last_backup=%.2f;%s;%s",
+            $self->{last_backup},
+            $self->{warningrange}, $self->{criticalrange});
+      } else {
+        $self->add_nagios(
+            defined $params{mitigation} ? $params{mitigation} : 1,
+            sprintf("%s was never backed up", $self->{name})
+        );
+      }
       if ($self->{handle}->{errstr}) {
         $self->{handle}->{errstr} =~ s/(.*)\n(.+)/$1,$2/g;
         chomp $self->{handle}->{errstr};
