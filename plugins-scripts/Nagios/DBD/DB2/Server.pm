@@ -1055,8 +1055,9 @@ sub fetchrow_array {
   }; 
   if ($@) {
     $self->debug(sprintf "bumm %s", $@);
+    $self->{errstr} = $@;
   } elsif ($sth->errstr()) {
-    $self->{errstr} = $sth->errstr()
+    $self->{errstr} = $sth->errstr();
   }
   if (-f "/tmp/check_db2_health_simulation/".$self->{mode}) {
     my $simulation = do { local (@ARGV, $/) = 
@@ -1087,8 +1088,9 @@ sub fetchall_array {
   }; 
   if ($@) {
     printf STDERR "bumm %s\n", $@;
+    $self->{errstr} = $@;
   } elsif ($sth->errstr()) {
-    $self->{errstr} = $sth->errstr()
+    $self->{errstr} = $sth->errstr();
   }
   if (-f "/tmp/check_db2_health_simulation/".$self->{mode}) {
     my $simulation = do { local (@ARGV, $/) = 
@@ -1117,6 +1119,9 @@ sub fetchall_hashref {
   };
   if ($@) {
     printf STDERR "bumm %s\n", $@;
+    $self->{errstr} = $@;
+  } elsif ($sth->errstr()) {
+    $self->{errstr} = $sth->errstr();
   }
   return $hashref;
 }
@@ -1268,6 +1273,9 @@ sub fetchrow_array {
   };
   if ($@) {
     $self->debug(sprintf "bumm %s", $@);
+    $self->{errstr} = $@;
+  } elsif ($sth->errstr()) {
+    $self->{errstr} = $sth->errstr();
   }
   if (-f "/tmp/check_db2_health_simulation/".$self->{mode}) {
     my $simulation = do { local (@ARGV, $/) =
@@ -1296,6 +1304,9 @@ sub fetchall_array {
   };
   if ($@) {
     printf STDERR "bumm %s\n", $@;
+    $self->{errstr} = $@;
+  } elsif ($sth->errstr()) {
+    $self->{errstr} = $sth->errstr();
   }
   if (-f "/tmp/check_db2_health_simulation/".$self->{mode}) {
     my $simulation = do { local (@ARGV, $/) =
