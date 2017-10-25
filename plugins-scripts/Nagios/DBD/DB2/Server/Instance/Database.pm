@@ -193,8 +193,13 @@ sub init {
       $self->{index_usage} = $self->{rows_read} ? 
           ($self->{rows_selected} / $self->{rows_read} * 100) : 100;
     }
-  } elsif ($params{mode} =~ /server::instance::database::connectedusers/) {
-    if ($self->version_is_minimum('9.8')) { # 9.7 Fixpack 1
+  } elsif ($params{mode} =~ /server::instance::database::(connectedusers|applusage)/) {
+    #if ($self->version_is_minimum('9.8')) { # 9.7 Fixpack 1
+    # until 1.1.1.3 newer versions used sysibmadm.mon_connection_summary
+    # but this required higher privileges, role SYSMON was not enough
+    # as sysibmadm.applications is still available and is readable with the
+    # privileges a db2_health user normally gets, let's use it until it will be removed by ibm.
+    if ($self->version_is_minimum('20')) {
       @{$self->{connected_users}} = $self->{handle}->fetchall_array(q{
           SELECT
               application_name
@@ -213,41 +218,20 @@ sub init {
           WHERE
               appl_name NOT LIKE 'db2fw%'
           AND
-              appl_name NOT IN ('db2lused', 'db2stmm', 'db2taskd', 'db2wlmd')
+              appl_name NOT IN ('db2lused', 'db2stmm', 'db2taskd', 'db2wlmd', 'db2dbctrld', 'db2pcsd')
       });
     }
-  } elsif ($params{mode} =~ /server::instance::database::applusage/) {
-    if ($self->version_is_minimum('9.8')) { # 9.7 Fixpack 1
-      @{$self->{connected_users}} = $self->{handle}->fetchall_array(q{
+    if ($params{mode} =~ /server::instance::database::applusage/) {
+      $self->{maxappls} = $self->{handle}->fetchrow_array(q{
           SELECT
-              application_name
+              VALUE
           FROM
-              sysibmadm.mon_connection_summary
-      });
-    } else {
-      #SELECT COUNT(*) FROM sysibmadm.applications WHERE appl_status = 'CONNECTED'
-      # there are a lot more stati than "connected". Applications can
-      # be connected although being in another state.
-      @{$self->{connected_users}} = $self->{handle}->fetchall_array(q{
-          SELECT
-              appl_name
-          FROM
-              sysibmadm.applications
+              sysibmadm.dbcfg
           WHERE
-              appl_name NOT LIKE 'db2fw%'
-          AND
-              appl_name NOT IN ('db2lused', 'db2stmm', 'db2taskd', 'db2wlmd')
+              name = 'maxappls'
       });
+      $self->{applusage} = 100 * scalar(@{$self->{connected_users}}) / $self->{maxappls};
     }
-    $self->{maxappls} = $self->{handle}->fetchrow_array(q{
-        SELECT
-            VALUE
-        FROM
-            sysibmadm.dbcfg
-        WHERE
-            name = 'maxappls'
-    });
-    $self->{applusage} = 100 * scalar(@{$self->{connected_users}}) / $self->{maxappls};
   } elsif ($params{mode} =~ /server::instance::database::lastbackup/) {
     # DB2 for Linux UNIX and Windows 8.2.0
     # The SNAP_GET_DB table function returns snapshot information
