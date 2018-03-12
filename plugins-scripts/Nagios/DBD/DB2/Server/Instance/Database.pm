@@ -44,13 +44,26 @@ our @ISA = qw(DBD::DB2::Server::Instance);
       add_database($database);
       $num_databases++;
     } elsif (($params{mode} =~ /server::instance::database::usage/)) {
-      my @databaseresult = $params{handle}->fetchrow_array(q{
-        CALL GET_DBSIZE_INFO(?, ?, ?, 0)
+      my %attr;
+      eval {
+        require DBD::DB2::Constants;
+        DBD::DB2::Constants->import();
+        %attr = (db2_param_type=>SQL_PARAM_OUTPUT());
+      };
+      my ($snapshot_timestamp, $db_size, $db_capacity)  = (0, 0, 0);
+      my $sth = $params{handle}->{handle}->prepare(q{
+          CALL SYSPROC.GET_DBSIZE_INFO(?, ?, ?, 0)
       });
-      my ($snapshot_timestamp, $db_size, $db_capacity)  = 
+      $sth->bind_param_inout(1, \$snapshot_timestamp, 30, \%attr);
+      $sth->bind_param_inout(2, \$db_size, 30, \%attr);
+      $sth->bind_param_inout(3, \$db_capacity, 30, \%attr);
+      $sth->execute();
+      my $get_dbsize_info_error = $params{handle}->{handle}->errstr();
+      ($snapshot_timestamp, $db_size, $db_capacity)  =
+          # only used to see the debug output
           $params{handle}->fetchrow_array(q{
-              SELECT * FROM SYSTOOLS.STMG_DBSIZE_INFO
-          });
+              SELECT ?, ?, ? FROM sysibm.sysdummy1
+          }, $snapshot_timestamp, $db_size, $db_capacity);
       if ($snapshot_timestamp) {
         my %thisparams = %params;
         $thisparams{name} = $params{database};
@@ -63,6 +76,7 @@ our @ISA = qw(DBD::DB2::Server::Instance);
         $num_databases++;
       } else {
         $initerrors = 1;
+        print $get_dbsize_info_error."\n" if $get_dbsize_info_error;
         return undef;
       }
     } else {
