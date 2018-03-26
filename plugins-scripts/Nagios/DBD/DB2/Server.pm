@@ -51,6 +51,7 @@ sub new {
     report => $params{report},
     negate => $params{negate},
     labelformat => $params{labelformat},
+    affen => $params{affen},
     version => 'unknown',
     os => 'unknown',
     instance => undef,

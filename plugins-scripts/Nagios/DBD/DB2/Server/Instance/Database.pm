@@ -265,7 +265,7 @@ sub init {
     #   The SNAPDB administrative view and SNAP_GET_DB table function are deprecated and have been replaced by the MON_GET_DATABASE table function - Get database information metrics
     #   The SNAP_GET_DB_V97 table function is deprecated and has been replaced by the MON_GET_DATABASE table function
     my $sql = undef;
-    if ($self->version_is_minimum('10.5')) { 
+    if ($self->version_is_minimum('10.5') && ! $params{affen}) {
       $sql = sprintf "SELECT (DAYS(current timestamp) - DAYS(last_backup)) * 86400 + (MIDNIGHT_SECONDS(current timestamp) - MIDNIGHT_SECONDS(last_backup)) FROM sysibm.sysdummy1, TABLE(mon_get_database(-1)) AS T";
     } elsif ($self->version_is_minimum('10')) { 
       $sql = sprintf "SELECT (DAYS(current timestamp) - DAYS(last_backup)) * 86400 + (MIDNIGHT_SECONDS(current timestamp) - MIDNIGHT_SECONDS(last_backup)) FROM sysibm.sysdummy1, TABLE(snap_get_db('', -1)) AS T";

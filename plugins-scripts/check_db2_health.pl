@@ -278,7 +278,9 @@ my @params = (
     "with-mymodules-dyn-dir=s",
     "report=s",
     "labelformat=s",
-    "extra-opts:s");
+    "extra-opts:s",
+    "nutzediedrecksalteversionwegengroberunfaehigkeitderadministratorenaffen",
+    "nddavwgudaa");
 
 if (! GetOptions(\%commandline, @params)) {
   print_help();
@@ -539,6 +541,7 @@ my %params = (
     report => $commandline{report},
     labelformat => $commandline{labelformat},
     negate => $commandline{negate},
+    affen => $commandline{nutzediedrecksalteversionwegengroberunfaehigkeitderadministratorenaffen} || $commandline{nddavwgudaa},
 );
 my $server = undef;
 
