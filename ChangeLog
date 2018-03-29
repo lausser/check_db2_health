@@ -1,3 +1,5 @@
+* 1.1.2.2 - 2018-03-29
+  fix a bug in database-usage where sysdummy1 returns an empty result
 * 1.1.2.1 - 2018-03-26
   add
   --nutzediedrecksalteversionwegengroberunfaehigkeitderadministratorenaffen

@@ -59,7 +59,7 @@ our @ISA = qw(DBD::DB2::Server::Instance);
       $sth->bind_param_inout(3, \$db_capacity, 30, \%attr);
       $sth->execute();
       my $get_dbsize_info_error = $params{handle}->{handle}->errstr();
-      ($snapshot_timestamp, $db_size, $db_capacity)  =
+      my ($snapshot_timestamp_2, $db_size_2, $db_capacity_2)  =
           # only used to see the debug output
           $params{handle}->fetchrow_array(q{
               SELECT ?, ?, ? FROM sysibm.sysdummy1
