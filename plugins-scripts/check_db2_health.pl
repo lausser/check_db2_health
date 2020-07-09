@@ -550,6 +550,13 @@ $server->nagios(%params);
 $server->calculate_result();
 $nagios_message = $server->{nagios_message};
 $nagios_level = $server->{nagios_level};
+
+my $error_hadr = "SQL1776N";
+if (index($nagios_message, $error_hadr) != -1) {
+ $nagios_message = "Standby database";
+ $nagios_level = 0;
+}
+
 $perfdata = $server->{perfdata};
 
 printf "%s - %s", $ERRORCODES{$nagios_level}, $nagios_message;
