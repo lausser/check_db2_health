@@ -122,6 +122,7 @@ my %ERRORCODES=( 0 => 'OK', 1 => 'WARNING', 2 => 'CRITICAL', 3 => 'UNKNOWN' );
         $type = $type =~ /^[dD]/ ? 'dms' : 'sms';
         next if ($params{mode} =~ /::dms::manual$/ && ($type ne 'dms' || $tbsp_using_auto_storage));
         next if ($params{mode} =~ /::dms$/ && ($type ne 'dms'));
+        next if ($params{nosms} && ($type eq 'sms'));
         if ($params{regexp}) {
           next if $params{selectname} && $name !~ /$params{selectname}/;
         } else {

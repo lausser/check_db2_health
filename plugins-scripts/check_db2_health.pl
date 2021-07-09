@@ -171,6 +171,10 @@ EOUS
     --units
        one of %, KB, MB, GB. This is used for a better output of mode=sql
        and for specifying thresholds for mode=tablespace-free
+    --notemp
+       skip all temporary tablespaces
+    --nosms
+       skip all system managed tablespaces
 
   Tablespace-related modes check all tablespaces in one run by default.
   If only a single tablespace should be checked, use the --name parameter.
@@ -253,6 +257,7 @@ my @params = (
     "offlineok",
     "mitigation=s",
     "notemp",
+    "nosms",
     "name=s",
     "name2=s",
     "regexp",
@@ -530,6 +535,7 @@ my %params = (
     offlineok => $commandline{offlineok},
     mitigation => $commandline{mitigation},
     notemp => $commandline{notemp},
+    nosms => $commandline{nosms},
     selectname => $commandline{name} || $commandline{tablespace} || $commandline{datafile},
     regexp => $commandline{regexp},
     name => $commandline{name},
